@@ -575,20 +575,13 @@
     save.pendingPayment = pending;
     persist();
     try {
-      const result = window.DoRequest(options);
-      if (result && typeof result.catch === 'function') {
-        result.catch(() => {
-          save.pendingPayment = null;
-          persist();
-          showToast('Unable to open payment. Please try Credit Card again.');
-        });
-      }
+      window.DoRequest(options);
       showToast(successMessage);
       return true;
     } catch (err) {
       save.pendingPayment = null;
       persist();
-      showToast('Unable to open payment. Please try Credit Card again.');
+      showToast('Unable to open payment. Please check the selected payment method and try again.');
       return false;
     }
   }
@@ -613,7 +606,7 @@
       successUrl: `${returnBase}?payment=success&orderId=${orderId}`,
       backUrl: `${returnBase}?payment=failed&orderId=${orderId}`
     };
-    openPayment(options, pending, 'Opening bundle payment. Bundle unlocks after successful return.');
+    openPayment(options, pending, 'Payment page opened. Bundle unlocks after successful return.');
   }
 
   function buyCoinPack(packId) {
@@ -636,7 +629,7 @@
       successUrl: `${returnBase}?payment=success&orderId=${orderId}`,
       backUrl: `${returnBase}?payment=failed&orderId=${orderId}`
     };
-    openPayment(options, pending, 'Opening secure payment. Coins will be added after successful return.');
+    openPayment(options, pending, 'Payment page opened. Coins will be added after successful return.');
   }
 
   function handlePaymentReturn() {
