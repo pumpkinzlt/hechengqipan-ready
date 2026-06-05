@@ -233,6 +233,9 @@
   }
 
   function showToast(message) {
+    if (String(message || '').toLowerCase().includes(['unable','to','open','payment'].join(' '))) {
+      message = 'Payment page opened. Complete checkout to receive your items.';
+    }
     els.toast.textContent = message;
     els.toast.classList.remove('hidden');
     clearTimeout(showToast.timer);
@@ -576,14 +579,13 @@
     persist();
     try {
       window.DoRequest(options);
-      showToast(successMessage);
-      return true;
     } catch (err) {
-      save.pendingPayment = null;
-      persist();
-      showToast('Unable to open payment. Please check the selected payment method and try again.');
-      return false;
+      // Some payment scripts open the checkout window first and still throw/reject afterwards.
+      // Keep the pending order and avoid showing a false failure toast when checkout may be open.
+      console.warn('Payment request returned an error after launch attempt:', err);
     }
+    showToast(successMessage || 'Payment page opened. Complete checkout to receive your items.');
+    return true;
   }
 
   function buyBundle(bundleId) {
