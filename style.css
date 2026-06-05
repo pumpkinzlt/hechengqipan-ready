@@ -897,3 +897,274 @@ iframe[src*="customer" i] {
   color: #fff;
   box-shadow: 0 12px 28px rgba(35,109,255,.30);
 }
+
+/* V14 retention-focused polish */
+#homeScreen.active-screen {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 12px;
+  align-content: start;
+}
+#homeScreen .hero-card {
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, .78fr);
+  padding: clamp(16px, 2.2vw, 28px);
+}
+#homeScreen .hero-copy h1 {
+  font-size: clamp(42px, 4.8vw, 68px);
+  line-height: .98;
+  max-width: 980px;
+  margin-bottom: 14px;
+}
+#homeScreen .hero-note {
+  max-width: 980px;
+  margin-bottom: 14px;
+}
+.start-cta {
+  flex-direction: column;
+  gap: 5px;
+  min-height: 74px !important;
+}
+.start-cta .btn-title {
+  display: block;
+  font-size: 17px;
+  line-height: 1;
+}
+.start-cta small {
+  display: block;
+  font-size: 12px;
+  line-height: 1.15;
+  color: rgba(255,255,255,.78);
+  font-weight: 700;
+}
+#homeScreen .nav-grid .start-cta:not(.selected):not(.primary) small,
+#homeScreen .nav-grid .start-cta small {
+  color: rgba(255,255,255,.78);
+}
+#homeScreen .profile-panel .stat-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+#homeScreen .profile-panel .stat-grid div {
+  padding: 10px 11px;
+  min-height: 64px;
+}
+#homeScreen .profile-panel .stat-grid strong {
+  font-size: 18px;
+}
+.tutorial-card {
+  width: min(540px, 100%);
+}
+.tutorial-steps {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 16px;
+}
+.tutorial-steps article {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.025));
+}
+.tutorial-steps strong {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2c6cff, #4de5ff);
+  color: #fff;
+}
+.tutorial-steps span {
+  color: var(--muted);
+  line-height: 1.4;
+}
+.collection-card.locked .collection-icon {
+  filter: brightness(.2) blur(.2px);
+  opacity: .7;
+}
+.collection-card.locked strong {
+  color: rgba(237,248,255,.68);
+}
+.collection-card.unlocked {
+  animation: unlockGlow 2.4s ease-in-out infinite alternate;
+}
+.level-map-card {
+  height: 260px;
+}
+.level-map {
+  grid-template-columns: repeat(10, minmax(74px, 1fr));
+  gap: 10px;
+  padding: 4px 4px 10px;
+}
+.level-node {
+  position: relative;
+  min-height: 82px;
+}
+.level-node.current {
+  border-color: rgba(255,209,102,.48);
+  box-shadow: 0 0 0 1px rgba(255,209,102,.22), 0 12px 30px rgba(255,209,102,.12);
+}
+.level-node.completed {
+  border-color: rgba(126,242,176,.35);
+}
+.level-node.current::after {
+  content: 'Now';
+  position: absolute;
+  right: 9px;
+  top: 8px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: #1a2230;
+  background: var(--gold);
+  font-size: 10px;
+  font-weight: 900;
+}
+.store-card .store-badge {
+  margin-bottom: 2px;
+}
+.bundle-card {
+  background: linear-gradient(180deg, rgba(36,52,80,.97), rgba(16,35,58,.95));
+}
+.bundle-card .price {
+  font-size: 24px;
+}
+.rescue-panel {
+  border-color: rgba(255,209,102,.28);
+  background: linear-gradient(180deg, rgba(255,209,102,.08), rgba(255,255,255,.025));
+}
+.rush-active .canvas-wrap {
+  box-shadow: 0 0 0 1px rgba(255,209,102,.45), 0 0 28px rgba(255,209,102,.18);
+}
+@keyframes unlockGlow {
+  from { box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 10px 24px rgba(0,0,0,.14); }
+  to { box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 12px 30px rgba(126,242,176,.10); }
+}
+@media (max-width: 940px) {
+  #homeScreen .hero-card {
+    grid-template-columns: 1fr;
+  }
+  .level-map {
+    grid-template-columns: repeat(5, minmax(72px, 1fr));
+  }
+}
+@media (max-width: 620px) {
+  #homeScreen .hero-copy h1 {
+    font-size: 34px;
+  }
+  .start-cta {
+    min-height: 64px !important;
+  }
+  .start-cta .btn-title {
+    font-size: 15px;
+  }
+  .start-cta small {
+    font-size: 11px;
+  }
+  .level-map {
+    grid-template-columns: repeat(3, minmax(72px, 1fr));
+  }
+}
+
+/* V16 mode differentiation polish */
+.arena-rank .you-rank {
+  color: #fff;
+  background: rgba(77,229,255,.08);
+  border-radius: 10px;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+.mode-card[data-mode="beginner"] { border-color: rgba(126,242,176,.24); }
+.mode-card[data-mode="classic"] { border-color: rgba(255,209,102,.24); }
+.mode-card[data-mode="arena"] { border-color: rgba(255,123,196,.26); }
+.mode-card[data-mode="level"] { border-color: rgba(155,124,255,.26); }
+
+/* V17 stronger stage challenge and timer feeling */
+.stage-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 32%) 74px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(18,41,67,.92), rgba(10,24,41,.88));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 12px 28px rgba(0,0,0,.14);
+}
+.stage-copy {
+  min-width: 0;
+}
+.stage-copy span,
+.stage-copy em {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stage-copy strong {
+  display: block;
+  margin: 3px 0;
+  color: var(--text);
+  font-size: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stage-progress {
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.13);
+  background: rgba(2,8,17,.38);
+}
+.stage-progress span {
+  display: block;
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--cyan), var(--gold), var(--pink));
+  box-shadow: 0 0 16px rgba(77,229,255,.24);
+  transition: width .18s ease;
+}
+.stage-progress-text {
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 900;
+  text-align: right;
+  white-space: nowrap;
+}
+.game-frame {
+  grid-template-rows: auto auto 1fr auto auto;
+}
+@media (max-width: 940px) {
+  .stage-panel {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .stage-progress-text {
+    text-align: left;
+  }
+}
+@media (max-width: 620px) {
+  .stage-panel {
+    padding: 8px;
+    border-radius: 16px;
+  }
+  .stage-copy strong {
+    font-size: 13px;
+  }
+  .stage-copy span,
+  .stage-copy em,
+  .stage-progress-text {
+    font-size: 11px;
+  }
+  .stage-progress {
+    height: 10px;
+  }
+}

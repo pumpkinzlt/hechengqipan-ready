@@ -84,7 +84,7 @@
         </div>
 
         <div class="nav-grid mutual-group" data-group="homeNav">
-          <button id="primaryStartBtn" class="ui-btn primary home-nav-btn" type="button">▶ Start Game</button>
+          <button id="primaryStartBtn" class="ui-btn primary home-nav-btn start-cta selected" type="button">▶ Start Game</button>
           <button id="modeNavBtn" class="ui-btn home-nav-btn" type="button">🗺 Mode Select</button>
           <button id="shopNavBtn" class="ui-btn home-nav-btn" type="button">🛍 Shop</button>
           <button id="leaderNavBtn" class="ui-btn home-nav-btn" type="button">🏆 Leaderboard</button>
@@ -100,16 +100,16 @@
         </div>
         <div class="mode-grid mutual-group" data-group="modeSelect">
           <button class="mode-card ui-btn selected" data-mode="beginner" type="button">
-            <strong>🌿 Beginner Mode</strong><span>Longer timer, slower pace, guest friendly trial.</span><em>Open</em>
+            <strong>🌿 Beginner Mode</strong><span>Relaxed tutorial run with fewer penalties and helpful rewards.</span><em>Open</em>
           </button>
           <button class="mode-card ui-btn" data-mode="classic" type="button">
-            <strong>🌸 Classic Mode</strong><span>Standard score chase with saved best score.</span><em class="mode-lock">Login Required</em>
+            <strong>🌸 Classic Mode</strong><span>High-score rush: chain combos to spawn Gold tiles and climb the board.</span><em class="mode-lock">Login Required</em>
           </button>
           <button class="mode-card ui-btn" data-mode="arena" type="button">
-            <strong>⚡ Arena Mode</strong><span>Fast competitive run with live AI ranking.</span><em class="mode-lock">Login Required</em>
+            <strong>⚡ Arena Mode</strong><span>6×6 rival race: beat AI scores before the timer ends.</span><em class="mode-lock">Login Required</em>
           </button>
           <button class="mode-card ui-btn" data-mode="level" type="button">
-            <strong>🧩 Level Mode</strong><span>Hit target merges and earn up to 3 stars.</span><em class="mode-lock">Login Required</em>
+            <strong>🧩 Level Mode</strong><span>Puzzle stages: reach the target tile within limited moves.</span><em class="mode-lock">Login Required</em>
           </button>
         </div>
         <div class="level-map-card">
@@ -194,6 +194,17 @@
             <div><span>Combo</span><strong id="hudCombo" class="copyable" title="Click to copy">×0</strong></div>
             <div><span>Rush</span><strong id="hudRush" class="copyable" title="Click to copy">0%</strong></div>
           </div>
+          <div class="stage-panel" id="stagePanel">
+            <div class="stage-copy">
+              <span id="stageTitle">Stage 1 / 30</span>
+              <strong id="stageObjective">Clear the stage objective</strong>
+              <em id="stageDeadline">Ends in 0s</em>
+            </div>
+            <div class="stage-progress" aria-label="Stage progress">
+              <span id="stageProgressFill"></span>
+            </div>
+            <div class="stage-progress-text" id="stageProgressText">0%</div>
+          </div>
           <div class="canvas-wrap" id="canvasWrap">
             <canvas id="gameCanvas" width="900" height="640" aria-label="Merge Meadow Rush game canvas"></canvas>
           </div>
@@ -201,13 +212,30 @@
             <button id="pauseBtn" class="ui-btn press-only" type="button">Pause</button>
             <button id="resumeBtn" class="ui-btn press-only hidden" type="button">Resume</button>
             <button id="restartBtn" class="ui-btn press-only" type="button">Restart</button>
-            <button id="gameHomeBtn" class="ui-btn press-only subtle" type="button">Home</button>
+            <button id="gameHomeBtn" class="ui-btn press-only subtle" type="button">Back to Modes</button>
           </div>
           <div id="itemBar" class="item-bar"></div>
           <div id="arenaRank" class="arena-rank hidden"></div>
         </div>
       </section>
     </main>
+
+
+    <div id="tutorialModal" class="modal hidden tutorial-modal" role="dialog" aria-modal="true">
+      <div class="modal-card tutorial-card">
+        <p class="eyebrow">Quick Start</p>
+        <h2>Merge twins, chase rewards.</h2>
+        <div class="tutorial-steps">
+          <article><strong>1</strong><span>Tap two matching adjacent tiles.</span></article>
+          <article><strong>2</strong><span>Build bigger treasures before time runs out.</span></article>
+          <article><strong>3</strong><span>Use tools when you are close to the next reward.</span></article>
+        </div>
+        <div class="button-row">
+          <button id="tutorialStartBtn" class="ui-btn primary press-only" type="button">Got it, play now</button>
+          <button id="tutorialSkipBtn" class="ui-btn subtle press-only" type="button">Skip</button>
+        </div>
+      </div>
+    </div>
 
     <div id="gameOverModal" class="modal hidden" role="dialog" aria-modal="true">
       <div class="modal-card">
@@ -229,7 +257,7 @@
         </div>
         <div class="button-row">
           <button id="modalRestartBtn" class="ui-btn primary press-only" type="button">Restart</button>
-          <button id="modalHomeBtn" class="ui-btn subtle press-only" type="button">Home</button>
+          <button id="modalHomeBtn" class="ui-btn subtle press-only" type="button">Back to Modes</button>
         </div>
       </div>
     </div>

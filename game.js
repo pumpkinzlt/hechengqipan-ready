@@ -40,6 +40,16 @@
     { id: 'weekend', title: 'Weekend Meadow Deal', price: 9.99, coins: 1500, items: { autoMerge: 6, shuffle: 6, freeze: 5, doubleYield: 5 }, skin: 'candy', badge: 'Limited style value', desc: 'Coins, tools, and a skin unlock in one pack.' }
   ];
 
+  const DAILY_REWARDS = [
+    { day: 1, label: '50 Coins', coins: 50 },
+    { day: 2, label: 'Shuffle ×1', coins: 20, items: { shuffle: 1 } },
+    { day: 3, label: '100 Coins', coins: 100 },
+    { day: 4, label: 'Freeze Time ×1', coins: 30, items: { freeze: 1 } },
+    { day: 5, label: 'Chest Bonus', coins: 120, items: { autoMerge: 1 } },
+    { day: 6, label: '200 Coins', coins: 200 },
+    { day: 7, label: 'Rare Skin Trial', coins: 250, items: { doubleYield: 1, autoMerge: 1 } }
+  ];
+
   const ITEMS = {
     autoMerge: { title: 'Auto Merge', icon: '⚙️', cost: 120, cooldown: 14, duration: 8, desc: 'Auto-merges matching pairs for 8 seconds.' },
     shuffle: { title: 'Shuffle', icon: '🔀', cost: 90, cooldown: 12, duration: 0, desc: 'Refreshes the board and creates new chances.' },
@@ -55,10 +65,10 @@
   };
 
   const MODE_CONFIG = {
-    beginner: { label: 'Beginner', time: 240, spawnMax: 2, multiplier: 1, save: false, target: 'Free Merge', ai: false },
-    classic: { label: 'Classic', time: 180, spawnMax: 3, multiplier: 1.2, save: true, target: 'High Score', ai: false },
-    arena: { label: 'Arena', time: 120, spawnMax: 3, multiplier: 1.45, save: true, target: 'Beat AI', ai: true },
-    level: { label: 'Level', time: 170, spawnMax: 2, multiplier: 1.15, save: true, target: 'Reach Target', ai: false }
+    beginner: { label: 'Beginner', time: 300, spawnMax: 2, multiplier: 0.9, save: false, target: 'Learn & Relax', ai: false, boardSize: 5, style: 'tutorial', specialChance: .045 },
+    classic: { label: 'Classic', time: 180, spawnMax: 3, multiplier: 1.2, save: true, target: 'High Score Rush', ai: false, boardSize: 5, style: 'scoreRush', specialChance: .095 },
+    arena: { label: 'Arena', time: 105, spawnMax: 3, multiplier: 1.55, save: true, target: 'Beat AI Rivals', ai: true, boardSize: 6, style: 'rivalRace', specialChance: .13 },
+    level: { label: 'Level', time: 210, spawnMax: 2, multiplier: 1.08, save: true, target: 'Clear Stage Goal', ai: false, boardSize: 5, style: 'stagePuzzle', specialChance: .065 }
   };
 
   const LEVEL_MAP = Array.from({ length: 30 }, (_, i) => {
@@ -86,6 +96,7 @@
     musicToggle: $('musicToggle'), sfxToggle: $('sfxToggle'), accessibilityToggle: $('accessibilityToggle'), contrastToggle: $('contrastToggle'), motionToggle: $('motionToggle'), resetData: $('resetDataBtn'),
     canvasWrap: $('canvasWrap'), canvas: $('gameCanvas'),
     hudScore: $('hudScore'), hudBest: $('hudBest'), hudCoins: $('hudCoins'), hudMode: $('hudMode'), hudGoal: $('hudGoal'), hudTime: $('hudTime'), hudCombo: $('hudCombo'), hudRush: $('hudRush'),
+    stagePanel: $('stagePanel'), stageTitle: $('stageTitle'), stageObjective: $('stageObjective'), stageDeadline: $('stageDeadline'), stageProgressFill: $('stageProgressFill'), stageProgressText: $('stageProgressText'),
     pause: $('pauseBtn'), resume: $('resumeBtn'), restart: $('restartBtn'), gameHome: $('gameHomeBtn'), itemBar: $('itemBar'), arenaRank: $('arenaRank'),
     modal: $('gameOverModal'), gameOverSubtitle: $('gameOverSubtitle'), gameOverTitle: $('gameOverTitle'), finalScore: $('finalScore'), finalBest: $('finalBest'), finalCoins: $('finalCoins'), finalStars: $('finalStars'), rescueHint: $('rescueHint'), rescueUse: $('rescueUseBtn'), rescueShop: $('rescueShopBtn'), modalRestart: $('modalRestartBtn'), modalHome: $('modalHomeBtn'),
     toast: $('toast')
@@ -106,7 +117,8 @@
       playerLevel: email === 'Guest' ? 1 : 2,
       xp: email === 'Guest' ? 0 : 40,
       leaderboard: [],
-      dailyReward: { lastLoginDate: null },
+      dailyReward: { lastLoginDate: null, streak: 0 },
+      tutorialSeen: false,
       settings: {}
     };
   }
@@ -127,6 +139,7 @@
   let shopTab = 'coins';
   let activeScreen = 'home';
   let lastHomeNavButtonId = 'primaryStartBtn';
+  let gameReturnScreen = 'mode';
   let lastMode = 'beginner';
   let audioReady = false;
   let audioCtx = null;
@@ -148,6 +161,10 @@
     maxTime: 0,
     targetLevel: 4,
     targetReached: false,
+    stageNumber: 1,
+    stageTotal: 30,
+    stageClear: false,
+    endAt: 0,
     lastFrame: 0,
     loopId: null,
     boardRect: { x: 0, y: 0, size: 0, cell: 0 },
@@ -165,7 +182,11 @@
     lastSurprise: 0,
     specialSpawnCooldown: 0,
     rescueUsed: false,
-    lastFailureGap: 0
+    lastFailureGap: 0,
+    movesLeft: 0,
+    maxMoves: 0,
+    arenaPressureTimer: 0,
+    classicBonusCount: 0
   };
 
   function normalizeSave(parsed) {
@@ -271,6 +292,11 @@
     if (name === 'game') resizeCanvas();
   }
 
+  function returnFromGame() {
+    const target = gameReturnScreen && gameReturnScreen !== 'game' ? gameReturnScreen : 'mode';
+    setScreen(target);
+  }
+
   function updateUi() {
     const p = profile();
     const logged = isLoggedIn();
@@ -283,9 +309,14 @@
     els.homeSkin.textContent = SKINS[p.equippedSkin || 'default'].title.replace(' Garden', '');
     if (document.getElementById('homeCollection')) document.getElementById('homeCollection').textContent = `${(p.collection?.discovered || [1]).length}/${TILE_NAMES.length - 1}`;
     if (document.getElementById('homeLevel')) document.getElementById('homeLevel').textContent = `Lv.${p.playerLevel || 1}`;
-    els.primaryStart.textContent = logged ? '▶ Start Game' : '▶ Beginner Mode';
+    els.primaryStart.innerHTML = logged
+      ? '<span class="btn-title">▶ Start Game</span><small>Earn coins and unlock treasures</small>'
+      : '<span class="btn-title">▶ Beginner Mode</span><small>Try a relaxed practice run</small>';
     const claimed = p.dailyReward?.lastLoginDate === todayKey();
-    els.dailyState.textContent = logged ? (claimed ? 'Claimed Today' : 'Ready') : 'Log In';
+    const nextDay = nextDailyDay(p);
+    const reward = DAILY_REWARDS[nextDay - 1] || DAILY_REWARDS[0];
+    els.dailyState.textContent = logged ? (claimed ? `Day ${nextDay} Claimed` : `Day ${nextDay} Ready`) : 'Log In';
+    els.dailyReward.textContent = logged ? (claimed ? `Claimed Today · ${reward.label}` : `Claim Day ${nextDay}: ${reward.label}`) : 'Log in to Claim Reward';
     els.dailyReward.disabled = !logged || claimed;
     document.body.classList.toggle('high-contrast', save.settings.highContrast);
     document.body.classList.toggle('reduced-motion', save.settings.reducedMotion);
@@ -320,7 +351,8 @@
       setGroupSelected(button);
     });
 
-    document.querySelectorAll('.home-link, #brandHome').forEach(btn => btn.addEventListener('click', () => setScreen('home')));
+    document.querySelectorAll('.home-link').forEach(btn => btn.addEventListener('click', () => setScreen('home')));
+    els.brandHome.addEventListener('click', () => activeScreen === 'game' ? returnFromGame() : setScreen('home'));
     els.modeNav.addEventListener('click', () => setScreen('mode'));
     els.shopNav.addEventListener('click', () => setScreen('shop'));
     els.leaderNav.addEventListener('click', () => setScreen('leader'));
@@ -332,6 +364,8 @@
     els.logout.addEventListener('click', logout);
     els.dailyReward.addEventListener('click', claimDailyReward);
     els.resetData.addEventListener('click', resetData);
+    document.getElementById('tutorialStartBtn')?.addEventListener('click', closeTutorial);
+    document.getElementById('tutorialSkipBtn')?.addEventListener('click', closeTutorial);
 
     document.querySelectorAll('[data-mode]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -354,11 +388,11 @@
     els.pause.addEventListener('click', pauseGame);
     els.resume.addEventListener('click', resumeGame);
     els.restart.addEventListener('click', () => restartGame());
-    els.gameHome.addEventListener('click', () => setScreen('home'));
+    els.gameHome.addEventListener('click', returnFromGame);
     if (els.rescueUse) els.rescueUse.addEventListener('click', useRescueContinue);
     if (els.rescueShop) els.rescueShop.addEventListener('click', () => { els.modal.classList.add('hidden'); shopTab = 'bundles'; setScreen('shop'); });
     els.modalRestart.addEventListener('click', () => restartGame());
-    els.modalHome.addEventListener('click', () => setScreen('home'));
+    els.modalHome.addEventListener('click', returnFromGame);
 
     ['music', 'sfx', 'accessibility', 'highContrast', 'reducedMotion'].forEach(key => {
       const map = { music: els.musicToggle, sfx: els.sfxToggle, accessibility: els.accessibilityToggle, highContrast: els.contrastToggle, reducedMotion: els.motionToggle };
@@ -412,15 +446,39 @@
     showToast('Logged out. Beginner Mode remains available.');
   }
 
+  function dateOffsetKey(days) {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function nextDailyDay(p) {
+    const dr = { streak: 0, ...(p.dailyReward || {}) };
+    if (dr.lastLoginDate === todayKey()) return clamp(dr.streak || 1, 1, 7);
+    if (dr.lastLoginDate === dateOffsetKey(-1)) return ((dr.streak || 0) % 7) + 1;
+    return 1;
+  }
+
+  function grantDailyReward(p, reward) {
+    p.coins = (p.coins || 0) + (reward.coins || 0);
+    p.ownedItems = { ...defaultProfile(currentUser() || 'player@example.com').ownedItems, ...(p.ownedItems || {}) };
+    Object.entries(reward.items || {}).forEach(([id, count]) => { p.ownedItems[id] = (p.ownedItems[id] || 0) + count; });
+  }
+
   function claimDailyReward() {
     if (!isLoggedIn()) return showToast('Log in to claim the daily reward.');
     const p = profile();
+    p.dailyReward = { streak: 0, ...(p.dailyReward || {}) };
     if (p.dailyReward.lastLoginDate === todayKey()) return showToast('Daily reward already claimed today.');
+    const day = nextDailyDay(p);
+    const reward = DAILY_REWARDS[day - 1] || DAILY_REWARDS[0];
+    grantDailyReward(p, reward);
     p.dailyReward.lastLoginDate = todayKey();
-    p.coins += 50;
+    p.dailyReward.streak = day;
     persist();
     updateUi();
-    showToast('Daily reward claimed: 50 Coins.');
+    renderShop();
+    showToast(`Day ${day} reward claimed: ${reward.label}.`);
     coinSound();
   }
 
@@ -679,17 +737,20 @@
         <span>${unlocked ? s.desc : 'Find this special tile in a run'}</span>
       </article>`;
     }).join('');
-    els.collectionBody.innerHTML = `<div class="collection-summary"><strong>${discovered.size}/${TILE_NAMES.length - 1} treasures</strong><span>${specials.size}/${Object.keys(SPECIAL_TILES).length} special tiles discovered · Best: ${TILE_NAMES[p.collection?.bestTile || 1]}</span></div><div class="collection-grid">${normalCards}${specialCards}</div>`;
+    const nextLevel = TILE_NAMES.slice(1).findIndex((_, idx) => !discovered.has(idx + 1)) + 1;
+    const nextText = nextLevel > 0 ? `Next: ${TILE_NAMES[nextLevel]}` : 'All core treasures discovered';
+    els.collectionBody.innerHTML = `<div class="collection-summary"><strong>${discovered.size}/${TILE_NAMES.length - 1} treasures</strong><span>${specials.size}/${Object.keys(SPECIAL_TILES).length} special tiles discovered · Best: ${TILE_NAMES[p.collection?.bestTile || 1]} · ${nextText}</span></div><div class="collection-grid">${normalCards}${specialCards}</div>`;
   }
 
   function renderLevelMap() {
     if (!els.levelMap) return;
     const p = profile();
     const unlocked = isLoggedIn() ? (p.levelProgress?.unlocked || 1) : 0;
-    els.levelMap.innerHTML = LEVEL_MAP.slice(0, 12).map(meta => {
+    els.levelMap.innerHTML = LEVEL_MAP.map(meta => {
       const open = isLoggedIn() && meta.level <= unlocked;
+      const current = isLoggedIn() && meta.level === unlocked;
       const stars = p.levelProgress?.stars?.[meta.level] || 0;
-      return `<button class="level-node ui-btn ${open ? '' : 'locked'}" data-level-node="${meta.level}" type="button" ${open ? '' : 'disabled'}>
+      return `<button class="level-node ui-btn ${open ? '' : 'locked'} ${stars ? 'completed' : ''} ${current ? 'current' : ''}" data-level-node="${meta.level}" type="button" ${open ? '' : 'disabled'}>
         <strong>${meta.level}</strong><span>${meta.title}</span><em>${TILE_NAMES[meta.targetLevel]} · ${'★'.repeat(stars)}${'☆'.repeat(Math.max(0, 3-stars))}</em>
       </button>`;
     }).join('');
@@ -724,6 +785,9 @@
 
   function startGame(mode) {
     if (mode !== 'beginner' && !isLoggedIn()) return showToast('Please log in to play full modes.');
+    if (activeScreen !== 'game') {
+      gameReturnScreen = 'mode';
+    }
     lastMode = mode;
     const cfg = MODE_CONFIG[mode];
     const p = profile();
@@ -731,16 +795,22 @@
     game.paused = false;
     game.mode = mode;
     game.level = mode === 'level' ? (p.levelProgress?.unlocked || 1) : 1;
-    game.boardSize = save.settings.accessibility ? 5 : 5;
+    game.boardSize = cfg.boardSize || 5;
+    game.stageNumber = getStageNumber(mode, p);
+    game.stageTotal = LEVEL_MAP.length;
     game.board = makeBoard(game.boardSize, cfg.spawnMax);
     game.selected = null;
     game.pointerStart = null;
     game.score = 0;
     game.coinsEarned = 0;
     game.combo = 0;
-    game.maxTime = cfg.time + (save.settings.accessibility ? 50 : 0) + (mode === 'level' ? Math.max(0, 30 - game.level * 2) : 0);
+    game.maxTime = cfg.time + (save.settings.accessibility ? 50 : 0) + (mode === 'level' ? Math.max(0, 28 - game.level) : 0);
     game.timeLeft = game.maxTime;
+    game.endAt = Date.now() + Math.ceil(game.maxTime * 1000);
+    game.stageClear = false;
     game.targetLevel = mode === 'level' ? (LEVEL_MAP[clamp(game.level, 1, LEVEL_MAP.length) - 1]?.targetLevel || 4) : 0;
+    game.maxMoves = mode === 'level' ? Math.max(14, 30 - Math.floor(game.level / 2)) : 0;
+    game.movesLeft = game.maxMoves;
     game.targetReached = false;
     game.particles = [];
     game.floats = [];
@@ -756,6 +826,8 @@
     game.specialSpawnCooldown = 0;
     game.rescueUsed = false;
     game.lastFailureGap = 0;
+    game.arenaPressureTimer = mode === 'arena' ? 12 : 0;
+    game.classicBonusCount = 0;
     game.mission = createMission(mode);
     setScreen('game');
     els.pause.classList.remove('hidden');
@@ -768,6 +840,42 @@
     startMusic();
     beginLoop();
     startSound();
+    showModeIntro(mode);
+    showTutorialIfNeeded();
+  }
+
+
+  function getStageNumber(mode, p) {
+    if (mode === 'level') return clamp(p.levelProgress?.unlocked || 1, 1, LEVEL_MAP.length);
+    if (mode === 'classic') return clamp(Math.floor((p.bestScore || 0) / 1800) + 1, 1, LEVEL_MAP.length);
+    if (mode === 'arena') return clamp(p.playerLevel || 1, 1, LEVEL_MAP.length);
+    return 1;
+  }
+
+  function stageLabel() {
+    const modeName = MODE_CONFIG[game.mode]?.label || 'Stage';
+    return `${modeName} Stage ${game.stageNumber}/${game.stageTotal}`;
+  }
+
+  function missionProgressRatio() {
+    const m = game.mission;
+    if (!m) return 0;
+    if (m.done) return 1;
+    if (m.type === 'level') return clamp((m.progress || 0) / Math.max(1, m.targetLevel || 1), 0, 1);
+    if (m.type === 'score') return clamp((m.progress || 0) / Math.max(1, m.target || 1), 0, 1);
+    if (m.type === 'rank') return clamp((4 - arenaRankPosition()) / 3, 0, 1);
+    return clamp((m.progress || 0) / Math.max(1, m.target || 1), 0, 1);
+  }
+
+  function showModeIntro(mode) {
+    const messages = {
+      beginner: 'Beginner Stage: clear the merge target before the timer ends.',
+      classic: `Classic Stage ${game.stageNumber}: reach the score target before time runs out.`,
+      arena: 'Arena Stage: 6×6 rival race. Finish #1 before the timer ends.',
+      level: `Level Stage ${game.level}: reach ${TILE_NAMES[game.targetLevel]} within ${game.movesLeft} moves and the timer.`
+    };
+    addCenterFloat(messages[mode] || 'Start merging!');
+    showToast(messages[mode] || 'Start merging!');
   }
 
   function restartGame() {
@@ -791,6 +899,24 @@
     els.pause.classList.remove('hidden');
     els.resume.classList.add('hidden');
     showToast('Resumed');
+  }
+
+
+  function showTutorialIfNeeded() {
+    const p = profile();
+    if (p.tutorialSeen || !document.getElementById('tutorialModal')) return;
+    p.tutorialSeen = true;
+    persist();
+    game.paused = true;
+    els.pause.classList.add('hidden');
+    els.resume.classList.remove('hidden');
+    document.getElementById('tutorialModal').classList.remove('hidden');
+  }
+
+  function closeTutorial() {
+    const modal = document.getElementById('tutorialModal');
+    if (modal) modal.classList.add('hidden');
+    if (game.active && game.paused) resumeGame();
   }
 
   function stopGameLoop(clearActive = true) {
@@ -833,14 +959,25 @@
   function randomSpawnTile(maxLevel) {
     if (!game.active) return randomTile(maxLevel);
     game.specialSpawnCooldown = Math.max(0, (game.specialSpawnCooldown || 0) - 1);
-    const chance = save.settings.accessibility ? .12 : .085;
+    const cfg = MODE_CONFIG[game.mode] || MODE_CONFIG.classic;
+    const baseChance = cfg.specialChance ?? .085;
+    const chance = save.settings.accessibility ? Math.min(.18, baseChance + .035) : baseChance;
     if (game.merges > 2 && game.specialSpawnCooldown <= 0 && Math.random() < chance) {
-      game.specialSpawnCooldown = 4;
+      game.specialSpawnCooldown = game.mode === 'arena' ? 3 : game.mode === 'beginner' ? 6 : 4;
       const roll = Math.random();
-      if (roll < .32) return SPECIAL_TILES.rainbow.value;
-      if (roll < .55) return SPECIAL_TILES.gold.value;
-      if (roll < .78) return SPECIAL_TILES.chest.value;
-      return SPECIAL_TILES.bomb.value;
+      let specialValue;
+      if (game.mode === 'beginner') {
+        specialValue = roll < .45 ? SPECIAL_TILES.rainbow.value : roll < .75 ? SPECIAL_TILES.chest.value : SPECIAL_TILES.gold.value;
+      } else if (game.mode === 'arena') {
+        specialValue = roll < .28 ? SPECIAL_TILES.bomb.value : roll < .56 ? SPECIAL_TILES.gold.value : roll < .78 ? SPECIAL_TILES.rainbow.value : SPECIAL_TILES.chest.value;
+      } else if (game.mode === 'level') {
+        specialValue = roll < .36 ? SPECIAL_TILES.rainbow.value : roll < .62 ? SPECIAL_TILES.bomb.value : roll < .82 ? SPECIAL_TILES.chest.value : SPECIAL_TILES.gold.value;
+      } else {
+        specialValue = roll < .38 ? SPECIAL_TILES.gold.value : roll < .62 ? SPECIAL_TILES.chest.value : roll < .82 ? SPECIAL_TILES.rainbow.value : SPECIAL_TILES.bomb.value;
+      }
+      const special = SPECIAL_BY_VALUE[specialValue];
+      if (special) addCenterFloat(`${special.icon} ${special.title} appeared!`);
+      return specialValue;
     }
     return randomTile(maxLevel);
   }
@@ -857,21 +994,27 @@
   }
 
   function createMission(mode) {
-    if (mode === 'beginner') return { type: 'merges', title: 'Quest: make 8 merges', target: 8, progress: 0, rewardScore: 180, rewardCoins: 6, timeBonus: 10, done: false };
-    if (mode === 'classic') return { type: 'level', title: 'Quest: create a Berry', targetLevel: 4, progress: 0, rewardScore: 260, rewardCoins: 8, timeBonus: 8, done: false };
-    if (mode === 'arena') return { type: 'combo', title: 'Quest: reach Combo ×6', target: 6, progress: 0, rewardScore: 320, rewardCoins: 10, timeBonus: 6, done: false };
+    const stage = game.stageNumber || 1;
+    if (mode === 'beginner') return { type: 'merges', title: 'Stage Goal: make 8 safe merges', target: 8, progress: 0, rewardScore: 180, rewardCoins: 6, timeBonus: 0, done: false, endsRun: true };
+    if (mode === 'classic') {
+      const scoreTarget = 1800 + stage * 450;
+      return { type: 'score', title: `Stage ${stage} Goal: reach ${fmt(scoreTarget)} points`, target: scoreTarget, progress: 0, rewardScore: 380 + stage * 20, rewardCoins: 12, timeBonus: 0, done: false, endsRun: true };
+    }
+    if (mode === 'arena') return { type: 'rank', title: 'Arena Stage: finish #1 before time ends', target: 1, progress: 4, rewardScore: 420, rewardCoins: 12, timeBonus: 0, done: false, endsRun: false };
     if (mode === 'level') {
       const meta = LEVEL_MAP[clamp(game.level, 1, LEVEL_MAP.length) - 1] || LEVEL_MAP[0];
-      return { type: 'level', title: `Quest: make ${TILE_NAMES[game.targetLevel]}`, targetLevel: game.targetLevel, progress: 0, rewardScore: 220 + game.level * 20, rewardCoins: Math.floor(meta.reward / 4), timeBonus: 0, done: false };
+      return { type: 'level', title: `Stage ${game.level} Goal: make ${TILE_NAMES[game.targetLevel]}`, targetLevel: game.targetLevel, progress: 0, rewardScore: 220 + game.level * 20, rewardCoins: Math.floor(meta.reward / 4), timeBonus: 0, done: false, endsRun: true };
     }
-    return { type: 'merges', title: 'Quest: keep merging', target: 10, progress: 0, rewardScore: 160, rewardCoins: 5, timeBonus: 6, done: false };
+    return { type: 'merges', title: 'Stage Goal: keep merging', target: 10, progress: 0, rewardScore: 160, rewardCoins: 5, timeBonus: 0, done: false, endsRun: true };
   }
 
   function missionText() {
     const m = game.mission;
     if (!m) return MODE_CONFIG[game.mode]?.target || 'Free Merge';
     if (m.done) return 'Quest Complete ✓';
-    if (m.type === 'level') return `${m.title} ${m.progress}/${m.targetLevel}`;
+    if (m.type === 'level') return `${m.title} ${m.progress}/${m.targetLevel}${game.movesLeft ? ` · ${game.movesLeft} moves` : ''}`;
+    if (m.type === 'score') return `${m.title} ${fmt(Math.min(m.progress, m.target))}/${fmt(m.target)}`;
+    if (m.type === 'rank') return `${m.title} · current #${arenaRankPosition()}`;
     return `${m.title} ${Math.min(m.progress, m.target)}/${m.target}`;
   }
 
@@ -880,16 +1023,23 @@
     if (!m || m.done) return;
     if (m.type === 'merges') m.progress += 1;
     if (m.type === 'combo') m.progress = Math.max(m.progress, game.combo);
+    if (m.type === 'score') m.progress = Math.max(m.progress, game.score);
+    if (m.type === 'rank') m.progress = arenaRankPosition();
     if (m.type === 'level') m.progress = Math.max(m.progress, nextLevel);
-    const complete = m.type === 'level' ? m.progress >= m.targetLevel : m.progress >= m.target;
+    const complete = m.type === 'level' ? m.progress >= m.targetLevel : m.type === 'rank' ? m.progress <= m.target : m.progress >= m.target;
     if (!complete) return;
     m.done = true;
     game.score += m.rewardScore;
     game.coinsEarned += m.rewardCoins;
     if (m.timeBonus) game.timeLeft = Math.min(game.maxTime + 30, game.timeLeft + m.timeBonus);
-    addCenterFloat(`Quest Complete +${m.rewardScore}`);
-    showToast(`${m.title} complete! Bonus score, coins, and time awarded.`);
+    addCenterFloat(`Stage Goal Complete +${m.rewardScore}`);
+    showToast(`${m.title} complete! Stage clear bonus awarded.`);
     successSound();
+    if (m.endsRun && !game.stageClear) {
+      game.stageClear = true;
+      game.targetReached = true;
+      setTimeout(() => endGame(true, 'Stage Clear'), 500);
+    }
   }
 
   function addXp(amount) {
@@ -997,11 +1147,45 @@
         if (pair) mergeTiles(pair.a, pair.b, true);
       }
     }
-    if (MODE_CONFIG[game.mode].ai) updateAi(dt);
+    if (MODE_CONFIG[game.mode].ai) {
+      updateAi(dt);
+      updateArenaPressure(dt);
+    }
     if (!findMergePair() && Math.random() < dt * (save.settings.accessibility ? 2 : 1)) shuffleBoard(true);
-    if (game.timeLeft <= 0) endGame(false, 'Time is up');
+    if (game.mode === 'level' && game.movesLeft <= 0 && !game.targetReached) endGame(false, 'No moves left');
+    if (game.timeLeft <= 0) {
+      if (game.mode === 'arena') endGame(arenaRankPosition() === 1, arenaRankPosition() === 1 ? 'You beat the AI rivals' : 'AI rivals finished ahead');
+      else endGame(false, 'Time is up');
+    }
     updateHud();
     renderItemBar(false);
+  }
+
+
+  function updateArenaPressure(dt) {
+    if (game.mode !== 'arena') return;
+    game.arenaPressureTimer -= dt;
+    if (game.arenaPressureTimer > 0) return;
+    game.arenaPressureTimer = 14;
+    const leaderBoost = Math.floor(rand(180, 360));
+    const fastest = game.ai.reduce((best, ai) => ai.speed > best.speed ? ai : best, game.ai[0]);
+    if (fastest) fastest.score += leaderBoost;
+    addRandomSpecial(SPECIAL_TILES.gold.value);
+    addCenterFloat(`Arena Surge: rivals +${leaderBoost}`);
+    showToast('Arena Surge: rivals sped up. Use Gold tiles and combos to overtake them.');
+  }
+
+  function addRandomSpecial(value) {
+    const cells = [];
+    for (let y = 0; y < game.boardSize; y++) {
+      for (let x = 0; x < game.boardSize; x++) if (game.board[y][x] > 0) cells.push({ x, y });
+    }
+    if (!cells.length) return false;
+    const spot = choice(cells);
+    game.board[spot.y][spot.x] = value;
+    const special = SPECIAL_BY_VALUE[value];
+    if (special) addFloat(`${special.icon} ${special.title}`, spot.x, spot.y, '#ffd166');
+    return true;
   }
 
   function updateAi(dt) {
@@ -1014,10 +1198,21 @@
 
   function makeAiScores() {
     return [
-      { name: 'AvaBot', score: 0, speed: 18 },
-      { name: 'LunaAI', score: 0, speed: 14 },
-      { name: 'MergeMax', score: 0, speed: 22 }
+      { name: 'AvaBot', score: 0, speed: 22 },
+      { name: 'LunaAI', score: 0, speed: 17 },
+      { name: 'MergeMax', score: 0, speed: 26 },
+      { name: 'BotanicalBoss', score: 0, speed: 20 }
     ];
+  }
+
+  function arenaRows() {
+    return [{ name: 'You', score: game.score }, ...game.ai].sort((a, b) => b.score - a.score);
+  }
+
+  function arenaRankPosition() {
+    if (game.mode !== 'arena') return 1;
+    const rows = arenaRows();
+    return Math.max(1, rows.findIndex(row => row.name === 'You') + 1);
   }
 
   function findMergePair() {
@@ -1187,6 +1382,7 @@
     collapseAndSpawn(a.x, a.y);
     game.combo += 1;
     game.merges += 1;
+    if (game.mode === 'level') game.movesLeft = Math.max(0, game.movesLeft - 1);
     const cfg = MODE_CONFIG[game.mode];
     const itemBoost = game.activeItems.doubleYield > 0 ? 2 : 1;
     const rushBoost = game.rushTime > 0 ? 1.75 : 1;
@@ -1203,22 +1399,61 @@
     updateMission(next, automated);
     addRush(12 + next * 3 + Math.min(game.combo, 6));
     if (game.combo > 1) addFloat(`Combo ×${game.combo}`, b.x, b.y, '#4de5ff');
-    if (game.combo > 0 && game.combo % 5 === 0) {
-      game.timeLeft = Math.min(game.maxTime + 35, game.timeLeft + 5);
-      game.score += 100 * game.combo;
-      addCenterFloat(`Combo ×${game.combo}! +5s`);
+    if (next >= 6) {
+      makeParticles(b.x, b.y, next + 4);
+      addCenterFloat(`Rare ${TILE_NAMES[next]} unlocked!`);
     }
+    if (game.combo === 3) addCenterFloat('Combo ×3! Keep chaining');
+    if (game.combo > 0 && game.combo % 5 === 0) {
+      const timeBonus = game.mode === 'arena' ? 3 : game.mode === 'level' ? 0 : 5;
+      if (timeBonus) game.timeLeft = Math.min(game.maxTime + 35, game.timeLeft + timeBonus);
+      game.score += 100 * game.combo;
+      addCenterFloat(timeBonus ? `Combo ×${game.combo}! +${timeBonus}s` : `Combo ×${game.combo}! Score Boost`);
+    }
+    applyModeMergeBonus(next, b.x, b.y);
     if (game.merges - game.lastSurprise >= 6 && Math.random() < (automated ? .28 : .52)) {
       game.lastSurprise = game.merges;
       triggerSurpriseDrop(b.x, b.y);
     }
     maybeLuckyChain(automated);
-    if (game.mode === 'level' && next >= game.targetLevel) {
+    if (game.mode === 'level' && next >= game.targetLevel && !game.stageClear) {
       game.targetReached = true;
+      game.stageClear = true;
       setTimeout(() => endGame(true, `${TILE_NAMES[next]} target reached`), 350);
     }
     ensurePlayableBoard();
     return true;
+  }
+
+
+  function applyModeMergeBonus(nextLevel, x, y) {
+    if (game.mode === 'beginner') {
+      if (game.merges === 1) addCenterFloat('Nice! Match identical neighbors.');
+      if (game.combo === 2) game.timeLeft = Math.min(game.maxTime + 30, game.timeLeft + 3);
+      return;
+    }
+    if (game.mode === 'classic') {
+      if (game.combo > 0 && game.combo % 4 === 0) {
+        game.classicBonusCount += 1;
+        addRandomSpecial(SPECIAL_TILES.gold.value);
+        game.score += 180 + game.classicBonusCount * 40;
+        addCenterFloat('Classic Streak: Gold Tile spawned');
+      }
+      return;
+    }
+    if (game.mode === 'arena') {
+      if (game.combo >= 3) {
+        game.score += 140;
+        addRush(8);
+        addFloat('Rival Overtake +140', x, y, '#ffd166');
+      }
+      return;
+    }
+    if (game.mode === 'level') {
+      if (nextLevel >= game.targetLevel - 1 && game.movesLeft > 0) {
+        addFloat(`${game.movesLeft} moves left`, x, y, '#4de5ff');
+      }
+    }
   }
 
   function collapseAndSpawn(emptyX, emptyY) {
@@ -1288,16 +1523,26 @@
     els.hudBest.textContent = fmt(Math.max(p.bestScore || 0, game.score));
     els.hudCoins.textContent = fmt((p.coins || 0) + game.coinsEarned);
     els.hudMode.textContent = cfg.label;
-    els.hudGoal.textContent = game.rushTime > 0 ? `Gold Rush ${Math.ceil(game.rushTime)}s` : missionText();
-    els.hudTime.textContent = game.activeItems.freeze > 0 ? `❄ ${Math.ceil(game.timeLeft)}` : `${Math.ceil(game.timeLeft)}s`;
+    let goalText = game.rushTime > 0 ? `Gold Rush ${Math.ceil(game.rushTime)}s` : missionText();
+    if (game.mode === 'arena') goalText = `${goalText} · Rank #${arenaRankPosition()}`;
+    els.hudGoal.textContent = goalText;
+    els.hudTime.textContent = game.mode === 'level'
+      ? `${Math.ceil(game.timeLeft)}s · ${game.movesLeft} moves`
+      : game.activeItems.freeze > 0 ? `❄ ${Math.ceil(game.timeLeft)}s` : `${Math.ceil(game.timeLeft)}s`;
     if (els.hudCombo) els.hudCombo.textContent = `×${game.combo}`;
     if (els.hudRush) els.hudRush.textContent = game.rushTime > 0 ? `🔥 ${Math.ceil(game.rushTime)}s` : `${Math.floor(game.rushMeter)}%`;
+    const ratio = missionProgressRatio();
+    if (els.stageTitle) els.stageTitle.textContent = stageLabel();
+    if (els.stageObjective) els.stageObjective.textContent = missionText();
+    if (els.stageDeadline) els.stageDeadline.textContent = game.activeItems.freeze > 0 ? `Frozen · ${Math.ceil(game.timeLeft)}s left` : `Ends in ${Math.ceil(game.timeLeft)}s`;
+    if (els.stageProgressFill) els.stageProgressFill.style.width = `${Math.round(ratio * 100)}%`;
+    if (els.stageProgressText) els.stageProgressText.textContent = `${Math.round(ratio * 100)}% clear`;
   }
 
   function renderArenaRank() {
     if (game.mode !== 'arena') return;
-    const rows = [{ name: 'You', score: game.score }, ...game.ai].sort((a, b) => b.score - a.score);
-    els.arenaRank.innerHTML = rows.map((row, i) => `<div><span>#${i + 1} ${escapeHtml(row.name)}</span><strong>${fmt(row.score)}</strong></div>`).join('');
+    const rows = arenaRows();
+    els.arenaRank.innerHTML = rows.map((row, i) => `<div class="${row.name === 'You' ? 'you-rank' : ''}"><span>#${i + 1} ${escapeHtml(row.name)}</span><strong>${fmt(row.score)}</strong></div>`).join('');
   }
 
   function endGame(won, reason) {
@@ -1313,11 +1558,20 @@
       if (game.score > (p.bestScore || 0)) p.bestScore = game.score;
       if (game.mode === 'level' && won) {
         const timeRatio = game.timeLeft / game.maxTime;
-        stars = timeRatio > .45 ? '★★★' : timeRatio > .22 ? '★★' : '★';
+        const moveRatio = game.maxMoves ? game.movesLeft / game.maxMoves : 0;
+        const performance = (timeRatio + moveRatio) / 2;
+        stars = performance > .45 ? '★★★' : performance > .22 ? '★★' : '★';
         p.levelProgress.stars[game.level] = Math.max(p.levelProgress.stars[game.level] || 0, stars.length);
         p.levelProgress.unlocked = Math.max(p.levelProgress.unlocked || 1, game.level + 1);
         p.coins += LEVEL_MAP[clamp(game.level, 1, LEVEL_MAP.length) - 1]?.reward || 40;
         addXp(35 + game.level * 2);
+      }
+      if (game.mode === 'arena' && won) {
+        const arenaBonus = 35 + Math.max(0, 5 - arenaRankPosition()) * 5;
+        p.coins += arenaBonus;
+        awardedCoins += arenaBonus;
+        stars = 'Champion';
+        addXp(45);
       }
       addLeaderboardEntry(p, cfg.label);
     } else {
@@ -1332,8 +1586,8 @@
     els.finalBest.textContent = fmt(Math.max(p.bestScore || 0, game.score));
     els.finalCoins.textContent = fmt(awardedCoins);
     els.finalStars.textContent = stars;
-    els.gameOverTitle.textContent = won ? 'Goal Complete' : 'Game Over';
-    els.gameOverSubtitle.textContent = reason || 'Run Complete';
+    els.gameOverTitle.textContent = won ? 'Stage Clear!' : 'Stage Failed';
+    els.gameOverSubtitle.textContent = reason || (won ? 'Challenge Complete' : 'Run Complete');
     renderRescueHint(won);
     els.modal.classList.remove('hidden');
     stopMusic();

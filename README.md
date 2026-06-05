@@ -29,3 +29,20 @@ README.md
 - The game remains front-end only and can be uploaded to GitHub Pages.
 
 - No online customer service/chat module is included in the game package.
+
+## V14 Retention & Conversion Update
+
+- Compact game lobby ratio and stronger Start Game CTA.
+- First-run quick tutorial for merge controls and tool usage.
+- 7-day login reward cycle with coins and tools.
+- Stronger combo, rare tile, Gold Rush, and special tile feedback.
+- Level Map now displays all 30 stages with current/completed visual states.
+- Collection summary shows the next treasure target.
+- Game Over copy and rescue panel are tuned for close-failure recovery.
+
+## V16 Mode Differentiation Update
+
+- Beginner Mode is now a relaxed tutorial run with fewer penalties, longer timer, and safer special tiles.
+- Classic Mode is now a high-score rush: score mission, combo streak bonuses, and Gold Tile spawns.
+- Arena Mode is now a 6x6 AI rival race with live ranking, faster timer, rival surges, and win/loss based on final rank.
+- Level Mode is now a puzzle stage mode with limited moves, target tile completion, and move/time-based star rating.
