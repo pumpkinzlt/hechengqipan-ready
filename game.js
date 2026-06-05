@@ -485,13 +485,53 @@
     }
   }
 
+  function paymentReturnBase() {
+    if (!location || !location.protocol || location.protocol === 'file:') return '';
+    if (!/^https?:$/.test(location.protocol)) return '';
+    return `${location.origin}${location.pathname}`;
+  }
+
+  function canOpenPayment() {
+    return Boolean(paymentReturnBase() && typeof window.DoRequest === 'function' && typeof window.CryptoJS !== 'undefined');
+  }
+
+  function openPayment(options, pending, successMessage) {
+    if (!paymentReturnBase()) {
+      showToast('Payment requires a deployed HTTPS/HTTP page. Local file preview cannot complete checkout.');
+      return false;
+    }
+    if (typeof window.DoRequest !== 'function' || typeof window.CryptoJS === 'undefined') {
+      showToast('Payment scripts are not loaded. Please check PayApi-v2.js and crypto-js.min.js.');
+      return false;
+    }
+    save.pendingPayment = pending;
+    persist();
+    try {
+      const result = window.DoRequest(options);
+      if (result && typeof result.catch === 'function') {
+        result.catch(() => {
+          save.pendingPayment = null;
+          persist();
+          showToast('Unable to open payment. Please try Credit Card again.');
+        });
+      }
+      showToast(successMessage);
+      return true;
+    } catch (err) {
+      save.pendingPayment = null;
+      persist();
+      showToast('Unable to open payment. Please try Credit Card again.');
+      return false;
+    }
+  }
+
   function buyBundle(bundleId) {
     if (!isLoggedIn()) return showToast('Log in to buy bundles.');
     const bundle = BUNDLES.find(b => b.id === bundleId);
     if (!bundle) return;
     const orderId = `MMRB${Date.now()}${Math.floor(Math.random() * 9000 + 1000)}`;
-    save.pendingPayment = { orderId, user: currentUser(), bundleId, type: 'bundle', amount: bundle.price, createdAt: new Date().toISOString() };
-    persist();
+    const returnBase = paymentReturnBase();
+    const pending = { orderId, user: currentUser(), bundleId, type: 'bundle', coins: bundle.coins, items: bundle.items, skin: bundle.skin || null, amount: bundle.price, createdAt: new Date().toISOString() };
     const options = {
       orderId,
       amount: bundle.price,
@@ -502,15 +542,10 @@
       firstName: 'Merge',
       lastName: 'Player',
       phone: '0000000000',
-      successUrl: `${location.origin}${location.pathname}?payment=success&orderId=${orderId}`,
-      backUrl: `${location.origin}${location.pathname}?payment=failed&orderId=${orderId}`
+      successUrl: `${returnBase}?payment=success&orderId=${orderId}`,
+      backUrl: `${returnBase}?payment=failed&orderId=${orderId}`
     };
-    if (typeof window.DoRequest === 'function' && typeof window.CryptoJS !== 'undefined') {
-      window.DoRequest(options);
-      showToast('Opening bundle payment. Bundle unlocks after successful return.');
-    } else {
-      showToast('Payment scripts are not loaded in this local demo. Pending bundle saved; no assets added.');
-    }
+    openPayment(options, pending, 'Opening bundle payment. Bundle unlocks after successful return.');
   }
 
   function buyCoinPack(packId) {
@@ -518,8 +553,8 @@
     const pack = COIN_PACKS.find(p => p.id === packId);
     if (!pack) return;
     const orderId = `MMR${Date.now()}${Math.floor(Math.random() * 9000 + 1000)}`;
-    save.pendingPayment = { orderId, user: currentUser(), packId, coins: pack.coins, amount: pack.price, createdAt: new Date().toISOString() };
-    persist();
+    const returnBase = paymentReturnBase();
+    const pending = { orderId, user: currentUser(), packId, type: 'coins', coins: pack.coins, amount: pack.price, createdAt: new Date().toISOString() };
     const options = {
       orderId,
       amount: pack.price,
@@ -530,15 +565,10 @@
       firstName: 'Merge',
       lastName: 'Player',
       phone: '0000000000',
-      successUrl: `${location.origin}${location.pathname}?payment=success&orderId=${orderId}`,
-      backUrl: `${location.origin}${location.pathname}?payment=failed&orderId=${orderId}`
+      successUrl: `${returnBase}?payment=success&orderId=${orderId}`,
+      backUrl: `${returnBase}?payment=failed&orderId=${orderId}`
     };
-    if (typeof window.DoRequest === 'function' && typeof window.CryptoJS !== 'undefined') {
-      window.DoRequest(options);
-      showToast('Opening secure payment. Coins will be added after successful return.');
-    } else {
-      showToast('Payment scripts are not loaded in this local demo. Pending order saved; no coins added.');
-    }
+    openPayment(options, pending, 'Opening secure payment. Coins will be added after successful return.');
   }
 
   function handlePaymentReturn() {
@@ -549,12 +579,21 @@
     const pending = save.pendingPayment;
     if (status === 'success' && pending && pending.orderId === orderId && !save.completedOrders.includes(orderId)) {
       ensureAccountDefaults(pending.user);
-      save.accounts[pending.user].coins += pending.coins;
+      const account = save.accounts[pending.user];
+      if (pending.type === 'bundle') {
+        const bundle = BUNDLES.find(b => b.id === pending.bundleId) || { coins: pending.coins || 0, items: pending.items || {}, skin: pending.skin || null, title: 'Bundle' };
+        applyBundle(account, bundle);
+        showToast(`Payment successful. ${bundle.title} unlocked.`);
+      } else {
+        account.coins = (account.coins || 0) + (pending.coins || 0);
+        showToast(`Payment successful. ${pending.coins || 0} Coins added.`);
+      }
       save.completedOrders.push(orderId);
       save.pendingPayment = null;
       save.currentUser = pending.user;
       persist();
-      showToast(`Payment successful. ${pending.coins} Coins added.`);
+      updateUi();
+      renderShop();
     } else if (status === 'failed') {
       save.pendingPayment = null;
       persist();

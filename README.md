@@ -25,5 +25,7 @@ README.md
 ## Notes
 
 - Data is saved in `localStorage` only.
-- Payment calls use the provided `DoRequest(options)` pattern. Real payment success/failure must be verified after deployment because local file testing cannot complete external checkout callbacks.
+- Payment calls use the provided `DoRequest(options)` pattern. Payment is blocked in local file preview to avoid invalid checkout callbacks; deploy to HTTPS/HTTP first, then test real success/failure returns.
 - The game remains front-end only and can be uploaded to GitHub Pages.
+
+- No online customer service/chat module is included in the game package.
