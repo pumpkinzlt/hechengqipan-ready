@@ -1633,7 +1633,47 @@
   }
   function stopMusic() { if (musicTimer) clearInterval(musicTimer); musicTimer = null; }
 
+
+  function hideThirdPartyFloatingPanels() {
+    const badText = /(aiprice|在线客服|客服|通知|论坛|更新日志|合作建议|customer service|live support|live chat)/i;
+    const badAttr = /(aiprice|live-chat|customer-service|support-widget|chat-widget)/i;
+    const safeTags = new Set(['SCRIPT', 'STYLE', 'LINK', 'META', 'TITLE']);
+    document.querySelectorAll('body > *').forEach(el => {
+      if (!el || el.id === 'app' || safeTags.has(el.tagName)) return;
+      const idClass = `${el.id || ''} ${el.className || ''}`;
+      const text = (el.innerText || el.textContent || '').slice(0, 1200);
+      let rect = { left: 9999, top: 9999, width: 0, height: 0 };
+      let style = null;
+      try { rect = el.getBoundingClientRect(); style = window.getComputedStyle(el); } catch (err) { return; }
+      const z = Number.parseInt(style.zIndex || '0', 10) || 0;
+      const isFixed = style.position === 'fixed' || style.position === 'sticky';
+      const isLeftFloating = rect.left <= 110 && rect.top >= window.innerHeight * 0.28 && rect.width <= 520 && rect.height <= 620;
+      const isSuspiciousWidget = isFixed && isLeftFloating && z >= 10;
+      if (badText.test(text) || badAttr.test(idClass) || isSuspiciousWidget) {
+        el.dataset.mmrHiddenThirdParty = 'true';
+        el.style.setProperty('display', 'none', 'important');
+        el.style.setProperty('visibility', 'hidden', 'important');
+        el.style.setProperty('pointer-events', 'none', 'important');
+      }
+    });
+  }
+
+  function watchThirdPartyFloatingPanels() {
+    hideThirdPartyFloatingPanels();
+    let timer = null;
+    const runSoon = () => {
+      clearTimeout(timer);
+      timer = setTimeout(hideThirdPartyFloatingPanels, 80);
+    };
+    try {
+      const observer = new MutationObserver(runSoon);
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+    } catch (err) {}
+    setInterval(hideThirdPartyFloatingPanels, 2000);
+  }
+
   function init() {
+    watchThirdPartyFloatingPanels();
     initButtons();
     bindCopyInteractions();
     handlePaymentReturn();

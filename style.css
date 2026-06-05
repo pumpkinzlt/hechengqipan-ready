@@ -776,3 +776,21 @@ body::after {
     min-height: 190px;
   }
 }
+
+/* V10 suppress third-party floating support/notification widgets */
+[data-mmr-hidden-third-party="true"],
+[id*="aiprice" i],
+[class*="aiprice" i],
+[id*="live-chat" i],
+[class*="live-chat" i],
+[id*="customer-service" i],
+[class*="customer-service" i],
+[id*="support-widget" i],
+[class*="support-widget" i],
+iframe[src*="aiprice" i],
+iframe[src*="livechat" i],
+iframe[src*="customer" i] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
