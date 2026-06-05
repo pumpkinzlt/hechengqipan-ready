@@ -126,6 +126,7 @@
   let selectedPayType = 8004;
   let shopTab = 'coins';
   let activeScreen = 'home';
+  let lastHomeNavButtonId = 'primaryStartBtn';
   let lastMode = 'beginner';
   let audioReady = false;
   let audioCtx = null;
@@ -256,6 +257,12 @@
     els.screens[name].classList.add('active-screen');
     activeScreen = name;
     els.modal.classList.add('hidden');
+    if (name === 'home') {
+      const homeNav = document.querySelector('[data-group="homeNav"]');
+      homeNav?.querySelectorAll('.ui-btn').forEach(b => b.classList.remove('selected'));
+      const selectedHomeNav = document.getElementById(lastHomeNavButtonId) || els.primaryStart;
+      selectedHomeNav?.classList.add('selected');
+    }
     updateUi();
     if (name === 'leader') renderLeaderboard();
     if (name === 'shop') renderShop();
@@ -276,7 +283,7 @@
     els.homeSkin.textContent = SKINS[p.equippedSkin || 'default'].title.replace(' Garden', '');
     if (document.getElementById('homeCollection')) document.getElementById('homeCollection').textContent = `${(p.collection?.discovered || [1]).length}/${TILE_NAMES.length - 1}`;
     if (document.getElementById('homeLevel')) document.getElementById('homeLevel').textContent = `Lv.${p.playerLevel || 1}`;
-    els.primaryStart.textContent = logged ? 'Start Game' : 'Beginner Mode';
+    els.primaryStart.textContent = logged ? '▶ Start Game' : '▶ Beginner Mode';
     const claimed = p.dailyReward?.lastLoginDate === todayKey();
     els.dailyState.textContent = logged ? (claimed ? 'Claimed Today' : 'Ready') : 'Log In';
     els.dailyReward.disabled = !logged || claimed;
@@ -299,6 +306,9 @@
     if (!group || button.classList.contains('press-only')) return;
     group.querySelectorAll('.ui-btn').forEach(b => b.classList.remove('selected'));
     button.classList.add('selected');
+    if (group.dataset.group === 'homeNav' && button.id) {
+      lastHomeNavButtonId = button.id;
+    }
   }
 
   function initButtons() {

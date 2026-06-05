@@ -794,3 +794,106 @@ iframe[src*="customer" i] {
   visibility: hidden !important;
   pointer-events: none !important;
 }
+
+/* V11 unify bottom home navigation style */
+.home-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 64px !important;
+  padding: 14px 18px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: .01em;
+  line-height: 1;
+}
+#homeScreen .nav-grid {
+  gap: 12px;
+  align-items: stretch;
+}
+#homeScreen .nav-grid .ui-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: 22px;
+  border-color: rgba(255,255,255,.14);
+}
+#homeScreen .nav-grid .ui-btn:not(.primary) {
+  background: linear-gradient(180deg, rgba(18,41,67,.92), rgba(12,27,45,.9));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 10px 24px rgba(0,0,0,.12);
+}
+#homeScreen .nav-grid .ui-btn:not(.primary):hover {
+  border-color: rgba(77,229,255,.26);
+  background: linear-gradient(180deg, rgba(21,47,76,.95), rgba(13,31,52,.93));
+}
+#homeScreen .nav-grid .ui-btn.primary {
+  background: linear-gradient(135deg, #2c6cff, #1c4fca);
+}
+@media (max-width: 940px) {
+  .home-nav-btn {
+    min-height: 60px !important;
+    font-size: 14px;
+  }
+}
+@media (max-width: 620px) {
+  .home-nav-btn {
+    min-height: 56px !important;
+    font-size: 14px;
+  }
+}
+
+/* V12 fix inconsistent home nav hover/selected shadow while keeping emoji */
+.home-nav-btn {
+  gap: 8px;
+}
+#homeScreen .nav-grid .ui-btn {
+  transition: border-color .16s ease, box-shadow .16s ease, background .16s ease, transform .16s ease, filter .16s ease;
+}
+#homeScreen .nav-grid .ui-btn:not(.primary) {
+  color: var(--text);
+}
+#homeScreen .nav-grid .ui-btn:not(.primary):hover,
+#homeScreen .nav-grid .ui-btn:not(.primary):focus-visible,
+#homeScreen .nav-grid .ui-btn.selected:not(.primary) {
+  border-color: rgba(77,229,255,.28);
+  background: linear-gradient(180deg, rgba(22,49,79,.96), rgba(14,33,55,.94));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 10px 24px rgba(0,0,0,.12), 0 0 0 1px rgba(77,229,255,.10);
+  color: #f3fbff;
+}
+#homeScreen .nav-grid .ui-btn:not(.primary):active {
+  transform: translateY(1px) scale(.995);
+}
+#homeScreen .nav-grid .ui-btn.selected:not(.primary)::before {
+  display: none;
+}
+#homeScreen .nav-grid .ui-btn.primary,
+#homeScreen .nav-grid .ui-btn.primary.selected {
+  border-color: rgba(255,255,255,.38);
+  box-shadow: 0 12px 28px rgba(35,109,255,.30);
+}
+
+/* V13 keep clicked home nav state and make primary visual state conditional */
+#homeScreen .nav-grid .ui-btn.primary:not(.selected) {
+  background: linear-gradient(180deg, rgba(18,41,67,.92), rgba(12,27,45,.9));
+  border-color: rgba(255,255,255,.14);
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 10px 24px rgba(0,0,0,.12);
+}
+#homeScreen .nav-grid .ui-btn.primary:not(.selected):hover,
+#homeScreen .nav-grid .ui-btn.primary:not(.selected):focus-visible {
+  border-color: rgba(77,229,255,.28);
+  background: linear-gradient(180deg, rgba(22,49,79,.96), rgba(14,33,55,.94));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 10px 24px rgba(0,0,0,.12), 0 0 0 1px rgba(77,229,255,.10);
+}
+#homeScreen .nav-grid .ui-btn.selected {
+  background: linear-gradient(135deg, #2c6cff, #1c4fca);
+  border-color: rgba(255,255,255,.38);
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(35,109,255,.30);
+}
+#homeScreen .nav-grid .ui-btn.selected:not(.primary) {
+  background: linear-gradient(135deg, #2c6cff, #1c4fca);
+  border-color: rgba(255,255,255,.38);
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(35,109,255,.30);
+}
