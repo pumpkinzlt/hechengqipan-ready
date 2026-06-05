@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#071627" />
+  <title>Merge Meadow Rush</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://www.roomilo.com/js/core/crypto-js.min.js"></script>
+  <script src="https://www.roomilo.com/js/core/PayApi-v2.js"></script>
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <button id="brandHome" class="brand ghost-action" type="button" aria-label="Go home">
+        <span class="brand-orb">🌼</span>
+        <span>
+          <strong>Merge Meadow Rush</strong>
+          <small>Merge, sparkle, and climb the meadow league.</small>
+        </span>
+      </button>
+      <div class="account-pill copyable" id="accountPill" title="Click to copy">Guest Mode</div>
+    </header>
+
+    <main class="screen-wrap">
+      <section id="homeScreen" class="screen active-screen">
+        <div class="hero-card">
+          <div class="hero-copy">
+            <p class="eyebrow">HTML5 Canvas Merge Game</p>
+            <h1>Build bigger blooms before the meadow timer runs out.</h1>
+            <p class="hero-note">Tap or drag matching adjacent tiles to merge them into higher-value treasures. New quests, combo streaks, Gold Rush bursts, and surprise drops make each run more active.</p>
+            <div class="feature-chips compact-chips" aria-label="Game highlights">
+              <span class="chip">🔥 Gold Rush</span>
+              <span class="chip">🎁 Surprise Drops</span>
+              <span class="chip">📚 Collection</span>
+              <span class="chip">📱 Mobile Ready</span>
+            </div>
+            <details class="home-fold">
+              <summary>More Details</summary>
+              <div class="home-fold-content">
+                <div class="hero-mini-cards">
+                  <article><strong>Core Loop</strong><span>Merge adjacent matching tiles into higher-value treasures and chain combos.</span></article>
+                  <article><strong>Smart Progress</strong><span>Daily rewards, saved scores, level stars, and local account progress.</span></article>
+                  <article><strong>Accessible Play</strong><span>High contrast, reduced motion, and accessibility mode are built in.</span></article>
+                </div>
+                <div class="meadow-showcase" aria-label="Game mood scene">
+                  <div class="showcase-banner">
+                    <strong>Today's Meadow Event</strong>
+                    <span>Bloom Parade is active — keep merging to trigger brighter Gold Rush moments.</span>
+                  </div>
+                  <div class="showcase-row">
+                    <div class="showcase-bubble"><span>🌱</span><small>Grow</small></div>
+                    <div class="showcase-bubble"><span>✨</span><small>Boost</small></div>
+                    <div class="showcase-bubble"><span>🎁</span><small>Collect</small></div>
+                    <div class="showcase-bubble"><span>🏆</span><small>Climb</small></div>
+                  </div>
+                </div>
+              </div>
+            </details>
+</div>
+          <div class="profile-panel">
+            <div id="authLoggedOut" class="auth-box">
+              <label>Email<input id="emailInput" type="email" autocomplete="email" placeholder="player@example.com" /></label>
+              <label>Password<input id="passwordInput" type="password" autocomplete="current-password" placeholder="6+ characters" /></label>
+              <div class="button-row mutual-group" data-group="auth">
+                <button id="loginBtn" class="ui-btn selected" type="button">Log In</button>
+                <button id="registerBtn" class="ui-btn" type="button">Register</button>
+              </div>
+            </div>
+            <div id="authLoggedIn" class="auth-box hidden">
+              <p class="signed-in copyable" id="signedInText" title="Click to copy">Signed in: player@example.com</p>
+              <button id="logoutBtn" class="ui-btn subtle" type="button">Log Out</button>
+            </div>
+            <div class="stat-grid">
+              <div><span>Coins</span><strong id="homeCoins" class="copyable" title="Click to copy">0</strong></div>
+              <div><span>Best Score</span><strong id="homeBest" class="copyable" title="Click to copy">0</strong></div>
+              <div><span>Skin</span><strong id="homeSkin" class="copyable" title="Click to copy">Default</strong></div>
+              <div><span>Daily Reward</span><strong id="dailyState" class="copyable" title="Click to copy">Log In</strong></div>
+              <div><span>Collection</span><strong id="homeCollection" class="copyable" title="Click to copy">1/9</strong></div>
+              <div><span>Player Level</span><strong id="homeLevel" class="copyable" title="Click to copy">Lv.1</strong></div>
+            </div>
+            <button id="dailyRewardBtn" class="ui-btn wide reward-btn" type="button">Claim Daily 50 Coins</button>
+          </div>
+        </div>
+
+        <div class="nav-grid mutual-group" data-group="homeNav">
+          <button id="primaryStartBtn" class="ui-btn primary" type="button">▶ Beginner Mode</button>
+          <button id="modeNavBtn" class="ui-btn" type="button">🗺 Mode Select</button>
+          <button id="shopNavBtn" class="ui-btn" type="button">🛍 Shop</button>
+          <button id="leaderNavBtn" class="ui-btn" type="button">🏆 Leaderboard</button>
+          <button id="collectionNavBtn" class="ui-btn" type="button">📚 Collection</button>
+          <button id="settingsNavBtn" class="ui-btn" type="button">⚙ Settings</button>
+        </div>
+      </section>
+
+      <section id="modeScreen" class="screen">
+        <div class="section-head">
+          <div><p class="eyebrow">Mode Select</p><h2>Choose how you want to merge.</h2></div>
+          <button class="ui-btn subtle home-link" type="button">Home</button>
+        </div>
+        <div class="mode-grid mutual-group" data-group="modeSelect">
+          <button class="mode-card ui-btn selected" data-mode="beginner" type="button">
+            <strong>🌿 Beginner Mode</strong><span>Longer timer, slower pace, guest friendly trial.</span><em>Open</em>
+          </button>
+          <button class="mode-card ui-btn" data-mode="classic" type="button">
+            <strong>🌸 Classic Mode</strong><span>Standard score chase with saved best score.</span><em class="mode-lock">Login Required</em>
+          </button>
+          <button class="mode-card ui-btn" data-mode="arena" type="button">
+            <strong>⚡ Arena Mode</strong><span>Fast competitive run with live AI ranking.</span><em class="mode-lock">Login Required</em>
+          </button>
+          <button class="mode-card ui-btn" data-mode="level" type="button">
+            <strong>🧩 Level Mode</strong><span>Hit target merges and earn up to 3 stars.</span><em class="mode-lock">Login Required</em>
+          </button>
+        </div>
+        <div class="level-map-card">
+          <div class="level-map-head"><strong>Level Map</strong><span>Clear stages, earn stars, and unlock stronger targets.</span></div>
+          <div id="levelMap" class="level-map"></div>
+        </div>
+      </section>
+
+      <section id="shopScreen" class="screen">
+        <div class="section-head">
+          <div><p class="eyebrow">Shop</p><h2>Coin packs, merge tools, and tile skins.</h2></div>
+          <button class="ui-btn subtle home-link" type="button">Home</button>
+        </div>
+        <div class="tab-row mutual-group" data-group="shopTabs">
+          <button class="ui-btn selected" data-shop-tab="coins" type="button">💰 Coin Packs</button>
+          <button class="ui-btn" data-shop-tab="bundles" type="button">🎁 Bundles</button>
+          <button class="ui-btn" data-shop-tab="items" type="button">🪄 Items</button>
+          <button class="ui-btn" data-shop-tab="skins" type="button">🎨 Skins</button>
+        </div>
+        <div id="paymentMethods" class="payment-methods mutual-group" data-group="payMethods" aria-label="Payment methods">
+          <button class="pay-card ui-btn selected" data-pay-type="8004" type="button"><strong>Credit Card</strong><span>Visa / Mastercard</span></button>
+          <button class="pay-card ui-btn" data-pay-type="8003" type="button"><strong>Apple Pay</strong><span>Mobile wallet</span></button>
+          <button class="pay-card ui-btn" data-pay-type="8012" type="button"><strong>Google Pay</strong><span>Mobile wallet</span></button>
+        </div>
+        <div id="shopContent" class="shop-content"></div>
+        <div class="guide-card">
+          <h3>Item Guide</h3>
+          <p><strong>Auto Merge</strong> helps finish close goals. <strong>Shuffle</strong> breaks dead boards. <strong>Freeze Time</strong> rescues low-time runs. <strong>Double Yield</strong> pushes leaderboard scores. <strong>Continue Token</strong> saves one close failure.</p>
+        </div>
+      </section>
+
+      <section id="leaderScreen" class="screen">
+        <div class="section-head">
+          <div><p class="eyebrow">Leaderboard</p><h2>Saved scores by player and mode.</h2></div>
+          <button class="ui-btn subtle home-link" type="button">Home</button>
+        </div>
+        <div class="leader-table-wrap">
+          <table class="leader-table">
+            <thead><tr><th>Rank</th><th>Player</th><th>Score</th><th>Mode</th><th>Date</th></tr></thead>
+            <tbody id="leaderBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="collectionScreen" class="screen">
+        <div class="section-head">
+          <div><p class="eyebrow">Collection</p><h2>Discover every treasure and special tile.</h2></div>
+          <button class="ui-btn subtle home-link" type="button">Home</button>
+        </div>
+        <div id="collectionBody" class="collection-wrap"></div>
+      </section>
+
+      <section id="settingsScreen" class="screen">
+        <div class="section-head">
+          <div><p class="eyebrow">Settings</p><h2>Controls, accessibility, and local save notices.</h2></div>
+          <button class="ui-btn subtle home-link" type="button">Home</button>
+        </div>
+        <div class="settings-grid">
+          <label class="setting-card"><input id="musicToggle" type="checkbox" /> Background Music <span>Mode-based soft synth loop.</span></label>
+          <label class="setting-card"><input id="sfxToggle" type="checkbox" /> Sound Effects <span>Clicks, merge, shop, game over.</span></label>
+          <label class="setting-card"><input id="accessibilityToggle" type="checkbox" /> Accessibility Mode <span>Slower timer, easier board, stronger hints.</span></label>
+          <label class="setting-card"><input id="contrastToggle" type="checkbox" /> High Contrast Mode <span>Tile labels and stronger outlines.</span></label>
+          <label class="setting-card"><input id="motionToggle" type="checkbox" /> Reduced Motion <span>Less particles and softer animation.</span></label>
+        </div>
+        <div class="notice-grid">
+          <article><h3>Control Guide</h3><p>PC: click or drag one tile onto an adjacent matching tile. Press P to pause, R to restart, and 1-4 to use tools. Mobile: tap a tile, then tap an adjacent matching tile.</p></article>
+          <article><h3>Local Save Notice</h3><p>This demo stores account progress, coins, skins, items, daily reward status, payment orders, and leaderboard data in localStorage only.</p></article>
+          <article><h3>Payment Notice</h3><p>Coin packs require login. Coins are only credited after a successful return URL with a matching pending order. Failed payment returns do not add coins.</p></article>
+          <article><h3>Data Tools</h3><p>Reset removes all local progress for this browser. Use it only for testing.</p><button id="resetDataBtn" class="ui-btn danger" type="button">Reset Data</button></article>
+        </div>
+      </section>
+
+      <section id="gameScreen" class="screen game-screen">
+        <div class="game-frame">
+          <div class="game-hud">
+            <div><span>Score</span><strong id="hudScore" class="copyable" title="Click to copy">0</strong></div>
+            <div><span>Best</span><strong id="hudBest" class="copyable" title="Click to copy">0</strong></div>
+            <div><span>Coins</span><strong id="hudCoins" class="copyable" title="Click to copy">0</strong></div>
+            <div><span>Mode</span><strong id="hudMode" class="copyable" title="Click to copy">Beginner</strong></div>
+            <div><span>Goal</span><strong id="hudGoal" class="copyable" title="Click to copy">Free Merge</strong></div>
+            <div><span>Time</span><strong id="hudTime" class="copyable" title="Click to copy">0</strong></div>
+            <div><span>Combo</span><strong id="hudCombo" class="copyable" title="Click to copy">×0</strong></div>
+            <div><span>Rush</span><strong id="hudRush" class="copyable" title="Click to copy">0%</strong></div>
+          </div>
+          <div class="canvas-wrap" id="canvasWrap">
+            <canvas id="gameCanvas" width="900" height="640" aria-label="Merge Meadow Rush game canvas"></canvas>
+          </div>
+          <div class="game-actions">
+            <button id="pauseBtn" class="ui-btn press-only" type="button">Pause</button>
+            <button id="resumeBtn" class="ui-btn press-only hidden" type="button">Resume</button>
+            <button id="restartBtn" class="ui-btn press-only" type="button">Restart</button>
+            <button id="gameHomeBtn" class="ui-btn press-only subtle" type="button">Home</button>
+          </div>
+          <div id="itemBar" class="item-bar"></div>
+          <div id="arenaRank" class="arena-rank hidden"></div>
+        </div>
+      </section>
+    </main>
+
+    <div id="gameOverModal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <p class="eyebrow" id="gameOverSubtitle">Run Complete</p>
+        <h2 id="gameOverTitle">Game Over</h2>
+        <div class="result-grid">
+          <div><span>Score</span><strong id="finalScore" class="copyable" title="Click to copy">0</strong></div>
+          <div><span>Best Score</span><strong id="finalBest" class="copyable" title="Click to copy">0</strong></div>
+          <div><span>Coins Earned</span><strong id="finalCoins" class="copyable" title="Click to copy">0</strong></div>
+          <div><span>Stars</span><strong id="finalStars" class="copyable" title="Click to copy">-</strong></div>
+        </div>
+        <div id="rescueHint" class="rescue-panel hidden">
+          <strong>Almost there</strong>
+          <p class="rescue-text">You were close. Use a tool to continue the run.</p>
+          <div class="button-row">
+            <button id="rescueUseBtn" class="ui-btn primary press-only" type="button">Use Continue Token</button>
+            <button id="rescueShopBtn" class="ui-btn press-only" type="button">Open Rescue Pack</button>
+          </div>
+        </div>
+        <div class="button-row">
+          <button id="modalRestartBtn" class="ui-btn primary press-only" type="button">Restart</button>
+          <button id="modalHomeBtn" class="ui-btn subtle press-only" type="button">Home</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast hidden" role="status"></div>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
