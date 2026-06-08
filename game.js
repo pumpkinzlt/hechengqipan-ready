@@ -153,6 +153,7 @@
     boardSize: 5,
     board: [],
     selected: null,
+    hoverTile: null,
     pointerStart: null,
     score: 0,
     coinsEarned: 0,
@@ -242,15 +243,10 @@
     if (String(message || '').toLowerCase().includes(['unable','to','open','payment'].join(' '))) {
       message = 'Payment page opened. Complete checkout to receive your items.';
     }
-    const mobileGameplay = document.body.classList.contains('game-active') && window.innerWidth <= 820;
     els.toast.textContent = message;
     els.toast.classList.remove('hidden');
-    els.toast.classList.toggle('compact-toast', mobileGameplay);
     clearTimeout(showToast.timer);
-    showToast.timer = setTimeout(() => {
-      els.toast.classList.add('hidden');
-      els.toast.classList.remove('compact-toast');
-    }, mobileGameplay ? 1500 : 3200);
+    showToast.timer = setTimeout(() => els.toast.classList.add('hidden'), 3200);
   }
 
   async function copyText(text) {
@@ -287,7 +283,7 @@
   }
 
   function setScreen(name) {
-    if (activeScreen === 'game' && name !== 'game') { stopGameLoop(true); stopMusic(); document.body.classList.remove('rush-active'); }
+    if (activeScreen === 'game' && name !== 'game') { stopGameLoop(true); stopMusic(); document.body.classList.remove('rush-active'); game.hoverTile = null; }
     Object.values(els.screens).forEach(s => s.classList.remove('active-screen'));
     els.screens[name].classList.add('active-screen');
     activeScreen = name;
@@ -420,8 +416,10 @@
     });
 
     els.canvas.addEventListener('pointerdown', pointerDown);
+    els.canvas.addEventListener('pointermove', pointerMove);
     els.canvas.addEventListener('pointerup', pointerUp);
-    els.canvas.addEventListener('pointercancel', () => { game.selected = null; });
+    els.canvas.addEventListener('pointerleave', pointerLeave);
+    els.canvas.addEventListener('pointercancel', () => { game.selected = null; game.hoverTile = null; game.pointerStart = null; });
     window.addEventListener('resize', resizeCanvas);
     window.addEventListener('keydown', handleKeys);
   }
@@ -807,6 +805,7 @@
     game.stageTotal = LEVEL_MAP.length;
     game.board = makeBoard(game.boardSize, cfg.spawnMax);
     game.selected = null;
+    game.hoverTile = null;
     game.pointerStart = null;
     game.score = 0;
     game.coinsEarned = 0;
@@ -886,8 +885,10 @@
       arena: 'Arena Stage: 6×6 rival race. Finish #1 before the timer ends.',
       level: `Level Stage ${game.level}: reach ${TILE_NAMES[game.targetLevel]} within ${game.movesLeft} moves and the timer.`
     };
-    addCenterFloat(messages[mode] || 'Start merging!');
-    showToast(messages[mode] || 'Start merging!');
+    const message = messages[mode] || 'Start merging!';
+    if (isMobileGame()) return;
+    addCenterFloat(message);
+    showToast(message);
   }
 
   function restartGame() {
@@ -1099,9 +1100,7 @@
     game.rushTime = save.settings.accessibility ? 15 : 12;
     game.timeLeft = Math.min(game.maxTime + 35, game.timeLeft + 4);
     addCenterFloat('🔥 GOLD RUSH! Score boost ON');
-    if (!(document.body.classList.contains('game-active') && window.innerWidth <= 820)) {
-      showToast('Gold Rush activated: higher score, bonus coins, and glowing board.');
-    }
+    showToast('Gold Rush activated: higher score, bonus coins, and glowing board.');
     successSound();
   }
 
@@ -1300,7 +1299,23 @@
     const tile = tileAtClient(event.clientX, event.clientY);
     if (!tile) return;
     game.lastInputAt = performance.now();
+    game.hoverTile = tile;
     game.pointerStart = tile;
+  }
+
+  function pointerMove(event) {
+    if (!game.active || game.paused) {
+      game.hoverTile = null;
+      return;
+    }
+    if (event.pointerType === 'touch') event.preventDefault();
+    const tile = tileAtClient(event.clientX, event.clientY);
+    game.hoverTile = tile || null;
+  }
+
+  function pointerLeave() {
+    game.hoverTile = null;
+    game.pointerStart = null;
   }
 
   function pointerUp(event) {
@@ -1308,6 +1323,7 @@
     event.preventDefault();
     const tile = tileAtClient(event.clientX, event.clientY);
     if (!tile) return;
+    game.hoverTile = tile;
     const start = game.pointerStart;
     game.pointerStart = null;
     if (start && (start.x !== tile.x || start.y !== tile.y)) {
@@ -1319,9 +1335,11 @@
       return;
     }
     game.selected = tile;
-    if (isMobileGame() || save.settings.accessibility) {
+    if (!isMobileGame() && save.settings.accessibility) {
       game.hintPair = bestHintForTile(tile) || findMergePair();
       addFloat('Pick a matching neighbor', tile.x, tile.y, '#4de5ff');
+    } else if (isMobileGame()) {
+      game.hintPair = null;
     }
   }
 
@@ -1762,12 +1780,21 @@
         const cx = br.x + x * br.cell + gap;
         const cy = br.y + y * br.cell + gap;
         const s = br.cell - gap * 2;
+        const mobileGame = isMobileGame();
         const selected = game.selected && game.selected.x === x && game.selected.y === y;
-        const hint = isHintTile(x, y);
+        const hovered = game.hoverTile && game.hoverTile.x === x && game.hoverTile.y === y && !selected;
+        const hint = !mobileGame && isHintTile(x, y);
         const hintGlow = hint ? (2.8 + Math.sin(game.hintPulse * 5) * .7) : 0;
-        roundedRect(cx, cy, s, s, 20, level ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.025)', selected ? '#4de5ff' : hint ? '#ffd166' : 'rgba(255,255,255,.18)', selected ? 4 : hint ? hintGlow : 1.3);
+        roundedRect(cx, cy, s, s, 20, level ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.025)', hint ? '#ffd166' : 'rgba(255,255,255,.18)', hint ? hintGlow : 1.3);
         if (level < 0) drawSpecialTile(cx, cy, s, level);
         else if (level) drawTile(cx, cy, s, level, colors[level] || '#fff');
+        if (hovered) {
+          roundedRect(cx + 2, cy + 2, s - 4, s - 4, 18, null, mobileGame ? 'rgba(255,255,255,.72)' : 'rgba(159,247,255,.76)', mobileGame ? 2 : 2.4);
+        }
+        if (selected) {
+          roundedRect(cx + 1.5, cy + 1.5, s - 3, s - 3, 18, null, '#4de5ff', mobileGame ? 3 : 4);
+          roundedRect(cx + 6, cy + 6, s - 12, s - 12, 15, null, 'rgba(255,255,255,.38)', 1.2);
+        }
       }
     }
   }
@@ -1833,7 +1860,8 @@
   }
 
   function isHintTile(x, y) {
-    if (!(isMobileGame() || save.settings.accessibility)) return false;
+    if (isMobileGame()) return false;
+    if (!save.settings.accessibility && performance.now() - (game.lastInputAt || 0) <= 2200) return false;
     let pair = null;
     if (game.selected) pair = bestHintForTile(game.selected);
     if (!pair && (save.settings.accessibility || performance.now() - (game.lastInputAt || 0) > 2200)) pair = game.hintPair || findMergePair();
