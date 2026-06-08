@@ -19,10 +19,10 @@
   };
   const SPECIAL_BY_VALUE = Object.fromEntries(Object.values(SPECIAL_TILES).map(t => [t.value, t]));
   const TILE_COLORS = {
-    default: ['#000000', '#85f0a6', '#5ad68b', '#ffd166', '#ff8ea3', '#ad7cff', '#67d9ff', '#fff475', '#ffb347', '#7cf7e9'],
-    candy: ['#000000', '#ff9fcb', '#ff74ad', '#ffd166', '#ff6b6b', '#b892ff', '#7bdff2', '#f6f7d7', '#f7aef8', '#b8f2e6'],
-    neon: ['#000000', '#53ffbd', '#00d084', '#faff00', '#ff2b7a', '#8c52ff', '#00d9ff', '#fff700', '#ff9f1c', '#3cfffa'],
-    ocean: ['#000000', '#a5f3fc', '#67e8f9', '#38bdf8', '#0ea5e9', '#2563eb', '#7dd3fc', '#fde68a', '#c084fc', '#99f6e4']
+    default: ['#000000', '#64d7ff', '#7ef2b0', '#ffd166', '#ff8ea3', '#ad7cff', '#67d9ff', '#fff475', '#ffb347', '#7cf7e9'],
+    candy: ['#000000', '#7dd3fc', '#ff9fcb', '#ffd166', '#ff6b6b', '#b892ff', '#7bdff2', '#f6f7d7', '#f7aef8', '#b8f2e6'],
+    neon: ['#000000', '#00d9ff', '#53ffbd', '#faff00', '#ff2b7a', '#8c52ff', '#00d9ff', '#fff700', '#ff9f1c', '#3cfffa'],
+    ocean: ['#000000', '#a5f3fc', '#34d399', '#fde68a', '#38bdf8', '#2563eb', '#7dd3fc', '#f9a8d4', '#c084fc', '#99f6e4']
   };
 
   const COIN_PACKS = [
@@ -1793,7 +1793,7 @@
         const hovered = game.hoverTile && game.hoverTile.x === x && game.hoverTile.y === y && !selected;
         const hint = !mobileGame && isHintTile(x, y);
         const hintGlow = hint ? (2.8 + Math.sin(game.hintPulse * 5) * .7) : 0;
-        roundedRect(cx, cy, s, s, 20, level ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.025)', hint ? '#ffd166' : 'rgba(255,255,255,.18)', hint ? hintGlow : 1.3);
+        roundedRect(cx, cy, s, s, 20, level ? (mobileGame ? 'rgba(255,255,255,.045)' : 'rgba(255,255,255,.08)') : 'rgba(255,255,255,.025)', hint ? '#ffd166' : (mobileGame ? 'rgba(255,255,255,.12)' : 'rgba(255,255,255,.18)'), hint ? hintGlow : (mobileGame ? 1 : 1.3));
         if (level < 0) drawSpecialTile(cx, cy, s, level);
         else if (level) drawTile(cx, cy, s, level, colors[level] || '#fff');
         if (hovered) {
@@ -1839,20 +1839,65 @@
     ctx.restore();
   }
 
+  function drawMobileTile(x, y, size, level, color) {
+    const cx = x + size / 2;
+    const cy = y + size / 2;
+    const radius = size * .34;
+    ctx.save();
+
+    const g = ctx.createRadialGradient(cx - radius * .22, cy - radius * .28, radius * .12, cx, cy, radius);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(.18, color);
+    g.addColorStop(1, color);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.lineWidth = Math.max(2, size * .026);
+    ctx.strokeStyle = 'rgba(255,255,255,.82)';
+    ctx.stroke();
+
+    ctx.lineWidth = Math.max(1.4, size * .018);
+    ctx.strokeStyle = 'rgba(0,0,0,.34)';
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+    ctx.font = `${Math.floor(size * .31)}px "Segoe UI Emoji", "Apple Color Emoji", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#071627';
+    ctx.fillText(TILE_ICONS[level], cx, cy - size * .015);
+
+    ctx.font = `800 ${Math.max(9, Math.floor(size * .10))}px system-ui, -apple-system, sans-serif`;
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = 'rgba(255,255,255,.94)';
+    ctx.fillText(TILE_NAMES[level], cx, y + size - Math.max(6, size * .055));
+    ctx.restore();
+  }
+
   function drawTile(x, y, size, level, color) {
+    if (isMobileGame()) {
+      drawMobileTile(x, y, size, level, color);
+      return;
+    }
+
     const t = performance.now() / 1000;
-    const pulse = save.settings.reducedMotion ? 0 : Math.sin(t * 3 + level) * 1.5;
+    const pulse = save.settings.reducedMotion ? 0 : Math.sin(t * 3 + level) * 1.1;
     const cx = x + size / 2;
     const cy = y + size / 2;
     const radius = size * .36 + pulse;
     ctx.save();
     ctx.shadowColor = color;
-    ctx.shadowBlur = isMobileGame() ? 5 : (save.settings.highContrast ? 22 : 12);
+    ctx.shadowBlur = save.settings.highContrast ? 18 : 8;
     ctx.fillStyle = color;
     ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.fill();
     ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(0,0,0,.22)';
-    ctx.beginPath(); ctx.arc(cx - radius * .24, cy - radius * .2, radius * .18, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = Math.max(1.5, size * .018);
+    ctx.strokeStyle = 'rgba(255,255,255,.55)';
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(0,0,0,.18)';
+    ctx.beginPath(); ctx.arc(cx - radius * .24, cy - radius * .2, radius * .16, 0, Math.PI * 2); ctx.fill();
     ctx.font = `${Math.floor(size * .34)}px "Segoe UI Emoji", "Apple Color Emoji", sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#06111f';
     ctx.fillText(TILE_ICONS[level], cx, cy + size * .01);

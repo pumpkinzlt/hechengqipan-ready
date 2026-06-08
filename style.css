@@ -2457,3 +2457,21 @@ html, body {
     max-height: 36px !important;
   }
 }
+
+
+/* V32 real-phone visual clarity: less green, less glow, sharper board */
+@media (max-width: 820px) {
+  body.game-active .canvas-wrap {
+    background:
+      radial-gradient(circle at 50% 10%, rgba(77,229,255,.035), transparent 20%),
+      linear-gradient(180deg, rgba(5,18,32,.98), rgba(5,15,28,.98)) !important;
+    filter: none !important;
+  }
+
+  body.game-active .game-frame,
+  body.game-active .game-hud div,
+  body.game-active .game-actions .ui-btn,
+  body.game-active .item-button {
+    filter: none !important;
+  }
+}

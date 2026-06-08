@@ -107,3 +107,13 @@ This version targets differences between real phone browsers and desktop DevTool
 This version forces mobile browsers to load new CSS/JS assets by using versioned filenames and query strings. It also keeps the visualViewport mobile fix and increases the mobile Canvas DPR cap for sharper true-phone rendering.
 
 Important deployment note: upload all files, including `style.v31.css` and `game.v31.js`. If GitHub Pages still shows an old layout, open with a fresh URL query such as `index.html?v=31` or clear browser cache.
+
+
+## V32 Visual Clarity
+
+This version improves real-phone visual clarity:
+- Makes low-level tiles use more distinct colors instead of mostly green
+- Adds a mobile-specific crisp tile renderer
+- Reduces glow/shadow blur on mobile
+- Keeps PC and payment logic unchanged
+- Uses cache-busted game.v32.js and style.v32.css
