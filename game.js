@@ -186,7 +186,12 @@
     movesLeft: 0,
     maxMoves: 0,
     arenaPressureTimer: 0,
-    classicBonusCount: 0
+    classicBonusCount: 0,
+    invalidStreak: 0,
+    lastInputAt: 0,
+    hintPair: null,
+    hintPulse: 0,
+    boardShake: 0
   };
 
   function normalizeSave(parsed) {
@@ -219,6 +224,7 @@
   function currentUser() { return save.currentUser; }
   function isLoggedIn() { return Boolean(currentUser() && save.accounts[currentUser()]); }
   function profile() { return isLoggedIn() ? save.accounts[currentUser()] : save.guest; }
+  function isMobileGame() { return document.body.classList.contains('game-active') && window.innerWidth <= 820; }
   function ensureAccountDefaults(email) {
     save.accounts[email] = { ...defaultProfile(email), ...(save.accounts[email] || {}) };
     save.accounts[email].ownedItems = { ...defaultProfile(email).ownedItems, ...(save.accounts[email].ownedItems || {}) };
@@ -236,10 +242,15 @@
     if (String(message || '').toLowerCase().includes(['unable','to','open','payment'].join(' '))) {
       message = 'Payment page opened. Complete checkout to receive your items.';
     }
+    const mobileGameplay = document.body.classList.contains('game-active') && window.innerWidth <= 820;
     els.toast.textContent = message;
     els.toast.classList.remove('hidden');
+    els.toast.classList.toggle('compact-toast', mobileGameplay);
     clearTimeout(showToast.timer);
-    showToast.timer = setTimeout(() => els.toast.classList.add('hidden'), 3200);
+    showToast.timer = setTimeout(() => {
+      els.toast.classList.add('hidden');
+      els.toast.classList.remove('compact-toast');
+    }, mobileGameplay ? 1500 : 3200);
   }
 
   async function copyText(text) {
@@ -280,6 +291,7 @@
     Object.values(els.screens).forEach(s => s.classList.remove('active-screen'));
     els.screens[name].classList.add('active-screen');
     activeScreen = name;
+    document.body.classList.toggle('game-active', name === 'game');
     els.modal.classList.add('hidden');
     if (name === 'home') {
       const homeNav = document.querySelector('[data-group="homeNav"]');
@@ -823,6 +835,11 @@
     game.lastFailureGap = 0;
     game.arenaPressureTimer = mode === 'arena' ? 12 : 0;
     game.classicBonusCount = 0;
+    game.invalidStreak = 0;
+    game.lastInputAt = performance.now();
+    game.hintPair = findMergePair();
+    game.hintPulse = 0;
+    game.boardShake = 0;
     game.mission = createMission(mode);
     setScreen('game');
     els.pause.classList.remove('hidden');
@@ -1082,7 +1099,9 @@
     game.rushTime = save.settings.accessibility ? 15 : 12;
     game.timeLeft = Math.min(game.maxTime + 35, game.timeLeft + 4);
     addCenterFloat('🔥 GOLD RUSH! Score boost ON');
-    showToast('Gold Rush activated: higher score, bonus coins, and glowing board.');
+    if (!(document.body.classList.contains('game-active') && window.innerWidth <= 820)) {
+      showToast('Gold Rush activated: higher score, bonus coins, and glowing board.');
+    }
     successSound();
   }
 
@@ -1134,6 +1153,11 @@
     game.particles = game.particles.filter(p => p.life > 0);
     game.floats.forEach(f => { f.life -= dt; f.y -= 34 * dt; });
     game.floats = game.floats.filter(f => f.life > 0);
+    if (isMobileGame() || save.settings.accessibility) {
+      game.hintPulse += dt;
+      if (!game.selected && performance.now() - (game.lastInputAt || 0) > 2200) game.hintPair = findMergePair();
+    }
+    if (game.boardShake > 0) game.boardShake = Math.max(0, game.boardShake - dt * 2.8);
     if (game.activeItems.autoMerge > 0) {
       game.autoMergeTick -= dt;
       if (game.autoMergeTick <= 0) {
@@ -1225,6 +1249,40 @@
   }
 
   function isAdjacent(a, b) { return Math.abs(a.x - b.x) + Math.abs(a.y - b.y) === 1; }
+
+  function bestHintForTile(tile) {
+    if (!tile) return null;
+    const v = game.board[tile.y]?.[tile.x];
+    if (!v) return null;
+    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+    for (const [dx, dy] of dirs) {
+      const nx = tile.x + dx, ny = tile.y + dy;
+      if (nx < 0 || ny < 0 || nx >= game.boardSize || ny >= game.boardSize) continue;
+      const nv = game.board[ny][nx];
+      if (v < 0 || nv < 0 || nv === v) return { a: tile, b: { x: nx, y: ny } };
+    }
+    return null;
+  }
+
+  function softInvalidMove(tile, message) {
+    if (!(isMobileGame() || save.settings.accessibility)) {
+      game.combo = 0;
+      game.selected = tile;
+      failSound();
+      addFloat('Match adjacent twins', tile.x, tile.y, '#ffd166');
+      return;
+    }
+    game.invalidStreak = (game.invalidStreak || 0) + 1;
+    game.selected = tile;
+    game.hintPair = bestHintForTile(tile) || findMergePair();
+    game.boardShake = Math.min(.32, .12 + game.invalidStreak * .04);
+    failSound();
+    addFloat(message, tile.x, tile.y, '#ffd166');
+    if (game.invalidStreak >= 2 && game.hintPair) {
+      addCenterFloat('Hint: glowing tiles can merge');
+    }
+  }
+
   function tileAtClient(clientX, clientY) {
     const rect = els.canvas.getBoundingClientRect();
     const sx = els.canvas.width / rect.width;
@@ -1241,6 +1299,7 @@
     event.preventDefault();
     const tile = tileAtClient(event.clientX, event.clientY);
     if (!tile) return;
+    game.lastInputAt = performance.now();
     game.pointerStart = tile;
   }
 
@@ -1260,6 +1319,10 @@
       return;
     }
     game.selected = tile;
+    if (isMobileGame() || save.settings.accessibility) {
+      game.hintPair = bestHintForTile(tile) || findMergePair();
+      addFloat('Pick a matching neighbor', tile.x, tile.y, '#4de5ff');
+    }
   }
 
   function tryMerge(a, b) {
@@ -1267,10 +1330,7 @@
     const av = game.board[a.y]?.[a.x];
     const bv = game.board[b.y]?.[b.x];
     if (!av || !bv || !isAdjacent(a, b)) {
-      game.combo = 0;
-      game.selected = b;
-      failSound();
-      addFloat('Match adjacent twins', b.x, b.y, '#ffd166');
+      softInvalidMove(b, 'Match adjacent twins');
       return;
     }
     if (av < 0 || bv < 0) {
@@ -1283,10 +1343,7 @@
       game.selected = null;
       return;
     }
-    game.combo = 0;
-    game.selected = b;
-    failSound();
-    addFloat('Match adjacent twins', b.x, b.y, '#ffd166');
+    softInvalidMove(b, 'Need same tile');
   }
 
   function handleSpecialMerge(a, b) {
@@ -1377,6 +1434,9 @@
     collapseAndSpawn(a.x, a.y);
     game.combo += 1;
     game.merges += 1;
+    game.invalidStreak = 0;
+    game.lastInputAt = performance.now();
+    game.hintPair = null;
     if (game.mode === 'level') game.movesLeft = Math.max(0, game.movesLeft - 1);
     const cfg = MODE_CONFIG[game.mode];
     const itemBoost = game.activeItems.doubleYield > 0 ? 2 : 1;
@@ -1394,6 +1454,7 @@
     updateMission(next, automated);
     addRush(12 + next * 3 + Math.min(game.combo, 6));
     if (game.combo > 1) addFloat(`Combo ×${game.combo}`, b.x, b.y, '#4de5ff');
+    if ((isMobileGame() || save.settings.accessibility) && game.combo >= 2 && game.combo <= 4) makeParticles(b.x, b.y, next + 2);
     if (next >= 6) {
       makeParticles(b.x, b.y, next + 4);
       addCenterFloat(`Rare ${TILE_NAMES[next]} unlocked!`);
@@ -1454,6 +1515,10 @@
   function collapseAndSpawn(emptyX, emptyY) {
     for (let y = emptyY; y > 0; y--) game.board[y][emptyX] = game.board[y - 1][emptyX];
     game.board[0][emptyX] = randomSpawnTile(MODE_CONFIG[game.mode].spawnMax + Math.floor(game.score / 1600));
+    if (isMobileGame() || save.settings.accessibility) {
+      if (!findMergePair()) ensurePlayableBoard();
+      game.hintPair = findMergePair();
+    }
   }
 
   function shuffleBoard(silent = false) {
@@ -1645,11 +1710,14 @@
   function computeBoardRect() {
     const w = els.canvas.width;
     const h = els.canvas.height;
-    const size = Math.min(w, h) * 0.82;
+    const mobileGame = isMobileGame();
+    const boardScale = mobileGame ? (h > w ? 0.965 : 0.92) : 0.82;
+    const size = Math.min(w, h) * boardScale;
+    const shake = mobileGame && game.boardShake > 0 && !save.settings.reducedMotion ? Math.sin(performance.now() * 0.045) * game.boardShake * 16 : 0;
     game.boardRect.size = size;
     game.boardRect.cell = size / game.boardSize;
-    game.boardRect.x = (w - size) / 2;
-    game.boardRect.y = (h - size) / 2 + (h > w ? -10 : 6);
+    game.boardRect.x = (w - size) / 2 + shake;
+    game.boardRect.y = Math.max(8, (h - size) / 2 + (h > w ? -4 : 4));
   }
 
   function drawGame() {
@@ -1695,8 +1763,9 @@
         const cy = br.y + y * br.cell + gap;
         const s = br.cell - gap * 2;
         const selected = game.selected && game.selected.x === x && game.selected.y === y;
-        const hint = save.settings.accessibility && isHintTile(x, y);
-        roundedRect(cx, cy, s, s, 20, level ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.025)', selected ? '#4de5ff' : hint ? '#ffd166' : 'rgba(255,255,255,.18)', selected || hint ? 4 : 1.3);
+        const hint = isHintTile(x, y);
+        const hintGlow = hint ? (2.8 + Math.sin(game.hintPulse * 5) * .7) : 0;
+        roundedRect(cx, cy, s, s, 20, level ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.025)', selected ? '#4de5ff' : hint ? '#ffd166' : 'rgba(255,255,255,.18)', selected ? 4 : hint ? hintGlow : 1.3);
         if (level < 0) drawSpecialTile(cx, cy, s, level);
         else if (level) drawTile(cx, cy, s, level, colors[level] || '#fff');
       }
@@ -1764,7 +1833,10 @@
   }
 
   function isHintTile(x, y) {
-    const pair = findMergePair();
+    if (!(isMobileGame() || save.settings.accessibility)) return false;
+    let pair = null;
+    if (game.selected) pair = bestHintForTile(game.selected);
+    if (!pair && (save.settings.accessibility || performance.now() - (game.lastInputAt || 0) > 2200)) pair = game.hintPair || findMergePair();
     if (!pair) return false;
     return (pair.a.x === x && pair.a.y === y) || (pair.b.x === x && pair.b.y === y);
   }
@@ -1812,7 +1884,9 @@
   }
 
   function addCenterFloat(text) {
-    game.floats.push({ text, x: els.canvas.width / 2, y: els.canvas.height * .18, color: '#ffd166', life: 1.1 });
+    const mobileGame = isMobileGame();
+    const y = mobileGame ? els.canvas.height * .13 : els.canvas.height * .18;
+    game.floats.push({ text, x: els.canvas.width / 2, y, color: '#ffd166', life: mobileGame ? 1.25 : 1.1 });
   }
 
   function drawFloats() {
