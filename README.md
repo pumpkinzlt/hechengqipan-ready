@@ -100,3 +100,10 @@ This version targets differences between real phone browsers and desktop DevTool
 - Prevents page scrolling while playing
 - Raises mobile Canvas DPR cap to 3 for sharper rendering on high-DPR phones
 - Keeps PC and payment logic unchanged
+
+
+## V31 Real Phone Cache Bust + Sharpness Fix
+
+This version forces mobile browsers to load new CSS/JS assets by using versioned filenames and query strings. It also keeps the visualViewport mobile fix and increases the mobile Canvas DPR cap for sharper true-phone rendering.
+
+Important deployment note: upload all files, including `style.v31.css` and `game.v31.js`. If GitHub Pages still shows an old layout, open with a fresh URL query such as `index.html?v=31` or clear browser cache.
