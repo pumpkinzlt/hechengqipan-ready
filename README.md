@@ -90,3 +90,13 @@ This version improves mobile gameplay feel:
 This version keeps the mobile gameplay layout improvements scoped to mobile screens only. Desktop/PC layout keeps the existing rules and is not overridden by the mobile optimization layer.
 
 Payment logic is not changed in this version. The existing PayApi-v2 / CryptoJS loading checks, pending order handling, and success return logic are preserved.
+
+
+## V30 Real Phone Mobile Fix
+
+This version targets differences between real phone browsers and desktop DevTools mobile emulation:
+- Uses visualViewport height for the real playable area
+- Forces the game screen to start at the top on mobile
+- Prevents page scrolling while playing
+- Raises mobile Canvas DPR cap to 3 for sharper rendering on high-DPR phones
+- Keeps PC and payment logic unchanged

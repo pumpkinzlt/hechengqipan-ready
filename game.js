@@ -288,6 +288,12 @@
     els.screens[name].classList.add('active-screen');
     activeScreen = name;
     document.body.classList.toggle('game-active', name === 'game');
+    if (name === 'game') {
+      updateMobileViewportHeight();
+      try { window.scrollTo(0, 0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; } catch (err) {}
+      setTimeout(() => { updateMobileViewportHeight(); resizeCanvas(); }, 80);
+      setTimeout(() => { updateMobileViewportHeight(); resizeCanvas(); }, 320);
+    }
     els.modal.classList.add('hidden');
     if (name === 'home') {
       const homeNav = document.querySelector('[data-group="homeNav"]');
@@ -1717,7 +1723,8 @@
 
   function resizeCanvas() {
     const rect = els.canvasWrap.getBoundingClientRect();
-    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = window.devicePixelRatio || 1;
+    const ratio = isMobileGame() ? Math.min(dpr, 3) : Math.min(dpr, 2);
     els.canvas.width = Math.max(320, Math.floor(rect.width * ratio));
     els.canvas.height = Math.max(320, Math.floor(rect.height * ratio));
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -2033,7 +2040,43 @@
     setInterval(hideThirdPartyFloatingPanels, 2000);
   }
 
+  function updateMobileViewportHeight() {
+    const vv = window.visualViewport;
+    const scale = vv?.scale || 1;
+    const rawHeight = vv?.height || window.innerHeight || document.documentElement.clientHeight || 0;
+    const rawWidth = vv?.width || window.innerWidth || document.documentElement.clientWidth || 0;
+    const h = Math.max(320, Math.floor(rawHeight));
+    const w = Math.max(320, Math.floor(rawWidth));
+    const isRealMobile = window.matchMedia('(max-width: 820px)').matches;
+    document.documentElement.style.setProperty('--mmr-app-height', `${h}px`);
+    document.documentElement.style.setProperty('--mmr-app-width', `${w}px`);
+    document.documentElement.style.setProperty('--mmr-safe-bottom', `${Math.max(0, (window.innerHeight || h) - h)}px`);
+    document.body.classList.toggle('real-mobile-viewport', isRealMobile);
+    if (activeScreen === 'game') {
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+    }
+  }
+
   function init() {
+    updateMobileViewportHeight();
+    window.visualViewport?.addEventListener('resize', () => {
+      updateMobileViewportHeight();
+      if (activeScreen === 'game') {
+        try { window.scrollTo(0, 0); } catch (err) {}
+        resizeCanvas();
+      }
+    });
+    window.visualViewport?.addEventListener('scroll', () => {
+      updateMobileViewportHeight();
+      if (activeScreen === 'game') {
+        try { window.scrollTo(0, 0); } catch (err) {}
+      }
+    });
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => { updateMobileViewportHeight(); if (activeScreen === 'game') resizeCanvas(); }, 180);
+      setTimeout(() => { updateMobileViewportHeight(); if (activeScreen === 'game') resizeCanvas(); }, 520);
+    });
     watchThirdPartyFloatingPanels();
     initButtons();
     bindCopyInteractions();
